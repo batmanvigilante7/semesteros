@@ -8,6 +8,7 @@ import Timeline from '@/pages/Timeline'
 import Insights from '@/pages/Insights'
 import Preferences from '@/pages/Preferences'
 import Showcase from '@/pages/Showcase'
+import Profile from '@/pages/Profile'
 import { AcademicEngineProvider } from '@/stores/AcademicEngine'
 import { ToastProvider } from '@/components/ui/Toast'
 
@@ -26,6 +27,7 @@ export default function App() {
               <Route path="insights" element={<Insights />} />
               <Route path="preferences" element={<Preferences />} />
               <Route path="showcase" element={<Showcase />} />
+              <Route path="profile" element={<Profile />} />
             </Route>
           </Routes>
         </BrowserRouter>

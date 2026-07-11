@@ -92,3 +92,30 @@ export type CourseDraft = Omit<
   Course,
   'id' | 'progress' | 'modules' | 'assignments' | 'resources' | 'notes'
 >
+
+export interface RecentActivity {
+  id: string
+  type: 'lesson' | 'resource' | 'assignment' | 'event'
+  content: string
+  timestamp: string
+}
+
+export interface UserProfile {
+  name: string
+  bio: string
+  email: string
+  phone: string
+  university: string
+  department: string
+  semester: string
+  branch: string
+  rollNumber: string
+  section: string
+  academicYear: string
+  expectedGraduation: string
+  interests: string[]
+  careerGoal: string
+  avatarUrl: string | null
+  achievements: string[]
+  recentActivities: RecentActivity[]
+}
