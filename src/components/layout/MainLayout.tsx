@@ -1,15 +1,27 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Header from './Header'
 
 export default function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    return localStorage.getItem('sidebar_collapsed') === 'true'
+  })
+
+  useEffect(() => {
+    localStorage.setItem('sidebar_collapsed', String(sidebarCollapsed))
+  }, [sidebarCollapsed])
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-bg-secondary">
+    <div className="flex h-screen w-screen overflow-hidden bg-bg-secondary text-text-primary">
       {/* Sidebar Navigation */}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        isCollapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+      />
 
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden">
