@@ -3,16 +3,38 @@ import { Outlet, NavLink } from 'react-router-dom'
 import { LayoutDashboard, CheckSquare, BookOpen, Menu } from 'lucide-react'
 import Sidebar from './Sidebar'
 import Header from './Header'
+import CommandPalette from './CommandPalette'
 
 export default function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     return localStorage.getItem('sidebar_collapsed') === 'true'
   })
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
 
   useEffect(() => {
     localStorage.setItem('sidebar_collapsed', String(sidebarCollapsed))
   }, [sidebarCollapsed])
+
+  // Key listeners for Command Palette
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setCommandPaletteOpen((prev) => !prev)
+      }
+    }
+    const handleOpenPalette = () => {
+      setCommandPaletteOpen(true)
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('open-command-palette', handleOpenPalette)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('open-command-palette', handleOpenPalette)
+    }
+  }, [])
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-bg-secondary text-text-primary">
@@ -83,6 +105,12 @@ export default function MainLayout() {
           </button>
         </nav>
       </div>
+
+      {/* Command Palette Overlay */}
+      <CommandPalette
+        isOpen={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+      />
     </div>
   )
 }
