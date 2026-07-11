@@ -15,7 +15,7 @@ export default function App() {
   return (
     <AcademicEngineProvider>
       <ToastProvider>
-        <BrowserRouter>
+        <BrowserRouter basename="/semesteros">
           <Routes>
             <Route path="/" element={<MainLayout />}>
               <Route index element={<Home />} />
