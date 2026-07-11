@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, NavLink } from 'react-router-dom'
+import { LayoutDashboard, CheckSquare, BookOpen, Menu } from 'lucide-react'
 import Sidebar from './Sidebar'
 import Header from './Header'
 
@@ -34,6 +35,53 @@ export default function MainLayout() {
             <Outlet />
           </div>
         </main>
+
+        {/* Mobile Bottom Navigation Bar */}
+        <nav className="flex h-16 w-full items-center justify-around border-t border-border-subtle bg-bg-primary px-4 py-2 lg:hidden shadow-soft z-20">
+          <NavLink
+            to="/"
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center gap-1 text-[10px] font-semibold transition-colors duration-200 ${
+                isActive ? 'text-accent-blue' : 'text-text-secondary'
+              }`
+            }
+          >
+            <LayoutDashboard className="h-5 w-5" />
+            <span>Home</span>
+          </NavLink>
+
+          <NavLink
+            to="/planner"
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center gap-1 text-[10px] font-semibold transition-colors duration-200 ${
+                isActive ? 'text-accent-blue' : 'text-text-secondary'
+              }`
+            }
+          >
+            <CheckSquare className="h-5 w-5" />
+            <span>Planner</span>
+          </NavLink>
+
+          <NavLink
+            to="/courses"
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center gap-1 text-[10px] font-semibold transition-colors duration-200 ${
+                isActive ? 'text-accent-blue' : 'text-text-secondary'
+              }`
+            }
+          >
+            <BookOpen className="h-5 w-5" />
+            <span>Courses</span>
+          </NavLink>
+
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="flex flex-col items-center justify-center gap-1 text-[10px] font-semibold text-text-secondary transition-colors duration-200 active:text-text-primary cursor-pointer"
+          >
+            <Menu className="h-5 w-5" />
+            <span>Menu</span>
+          </button>
+        </nav>
       </div>
     </div>
   )
