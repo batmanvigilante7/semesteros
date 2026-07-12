@@ -15,6 +15,9 @@ import { ToastProvider } from '@/components/ui/Toast'
 const CourseDetail = lazy(() => import('@/pages/CourseDetail'))
 const Resources = lazy(() => import('@/pages/Resources'))
 const Ai = lazy(() => import('@/pages/Ai'))
+const Welcome = lazy(() => import('@/pages/Welcome'))
+const Auth = lazy(() => import('@/pages/Auth'))
+const Onboarding = lazy(() => import('@/pages/Onboarding'))
 
 export default function App() {
   return (
@@ -22,6 +25,46 @@ export default function App() {
       <ToastProvider>
         <BrowserRouter basename="/semesteros">
           <Routes>
+            <Route
+              path="welcome"
+              element={
+                <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center">Loading...</div>}>
+                  <Welcome />
+                </Suspense>
+              }
+            />
+            <Route
+              path="login"
+              element={
+                <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center">Loading...</div>}>
+                  <Auth />
+                </Suspense>
+              }
+            />
+            <Route
+              path="signup"
+              element={
+                <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center">Loading...</div>}>
+                  <Auth />
+                </Suspense>
+              }
+            />
+            <Route
+              path="forgot-password"
+              element={
+                <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center">Loading...</div>}>
+                  <Auth />
+                </Suspense>
+              }
+            />
+            <Route
+              path="onboarding"
+              element={
+                <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center">Loading...</div>}>
+                  <Onboarding />
+                </Suspense>
+              }
+            />
             <Route path="/" element={<AppShell />}>
               <Route index element={<Home />} />
               <Route path="planner" element={<Planner />} />
