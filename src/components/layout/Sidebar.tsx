@@ -12,6 +12,7 @@ import {
   ChevronRight,
   User,
   Folder,
+  Bot,
 } from 'lucide-react'
 import NavigationItem from './NavigationItem'
 import UserMenu from './UserMenu'
@@ -28,6 +29,7 @@ const menuItems = [
   { path: '/courses', label: 'Courses', icon: BookOpen },
   { path: '/planner', label: 'Planner', icon: CheckSquare },
   { path: '/resources', label: 'Resources', icon: Folder },
+  { path: '/ai', label: 'AI Assistant', icon: Bot },
   { path: '/timeline', label: 'Timeline', icon: Calendar },
   { path: '/insights', label: 'Analytics', icon: BarChart2 },
   { path: '/profile', label: 'Profile', icon: User },

@@ -15,6 +15,7 @@ import {
   Sparkles,
   ArrowRight,
   Folder,
+  Bot,
 } from 'lucide-react'
 
 interface CommandPaletteProps {
@@ -80,6 +81,17 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
       category: 'Navigation',
       action: () => {
         navigate('/resources')
+        onClose()
+      },
+    },
+    {
+      id: 'nav-ai',
+      title: 'Go to AI Assistant',
+      subtitle: 'Open syllabus intelligence center',
+      icon: Bot,
+      category: 'Navigation',
+      action: () => {
+        navigate('/ai')
         onClose()
       },
     },
