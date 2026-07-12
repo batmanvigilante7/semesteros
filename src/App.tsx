@@ -5,7 +5,7 @@ import Home from '@/pages/Home'
 import Planner from '@/pages/Planner'
 import Courses from '@/pages/Courses'
 import Timeline from '@/pages/Timeline'
-import Insights from '@/pages/Insights'
+import Analytics from '@/pages/Analytics'
 import Preferences from '@/pages/Preferences'
 import Showcase from '@/pages/Showcase'
 import Profile from '@/pages/Profile'
@@ -83,7 +83,7 @@ export default function App() {
                 }
               />
               <Route path="timeline" element={<Timeline />} />
-              <Route path="insights" element={<Insights />} />
+              <Route path="analytics" element={<Analytics />} />
               <Route path="preferences" element={<Preferences />} />
               <Route path="showcase" element={<Showcase />} />
               <Route path="profile" element={<Profile />} />

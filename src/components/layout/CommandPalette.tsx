@@ -107,13 +107,13 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
       },
     },
     {
-      id: 'nav-insights',
-      title: 'Go to Insights & GPA Analytics',
+      id: 'nav-analytics',
+      title: 'Go to Analytics & GPA Insights',
       subtitle: 'Study hours and progress analytics',
       icon: BarChart2,
       category: 'Navigation',
       action: () => {
-        navigate('/insights')
+        navigate('/analytics')
         onClose()
       },
     },

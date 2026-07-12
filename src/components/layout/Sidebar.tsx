@@ -31,7 +31,7 @@ const menuItems = [
   { path: '/resources', label: 'Resources', icon: Folder },
   { path: '/ai', label: 'AI Assistant', icon: Bot },
   { path: '/timeline', label: 'Timeline', icon: Calendar },
-  { path: '/insights', label: 'Analytics', icon: BarChart2 },
+  { path: '/analytics', label: 'Analytics', icon: BarChart2 },
   { path: '/profile', label: 'Profile', icon: User },
   { path: '/preferences', label: 'Settings', icon: Settings },
 ]
