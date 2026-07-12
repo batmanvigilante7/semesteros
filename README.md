@@ -11,11 +11,14 @@ A beautiful Academic Operating System (AOS) built for students to manage semeste
 SemesterOS is designed around an operating system metaphor to give you a unified workspace for everything academic:
 
 *   **Home (Dashboard):** Your academic command center featuring a smart recommendation engine that highlights what to study next, workload analysis, and intelligent notifications.
-*   **Planner (Tasks):** A high-performance planner to manage assignments, project checkpoints, and study tasks with priority controls and progress metrics.
-*   **Courses (Subjects):** A structured tracker for credits, syllabus modules, attendance status, and lecture notes.
-*   **Timeline (Calendar):** An interactive agenda view to visualize deadlines, lectures, and upcoming exam dates.
-*   **Insights (Analytics):** Visual reports on study session durations, syllabus completion rates, and learning streaks.
-*   **Preferences (Settings):** Configuration dashboard to customize your current academic term dates and targets.
+*   **Planner (Tasks):** A high-performance planner to manage assignments, project checkpoints, and study tasks with priority controls, study session logs, and Pomodoro timers.
+*   **Courses (Academic Hub):** A structured tracker for credits, syllabus modules, attendance status, and course details matching computer science curricula (OOP, DSA, COA).
+*   **Knowledge Hub (Resources):** A personal academic library featuring folder trees, tag filters, file drawers, and a drag-and-drop file upload zone.
+*   **AI Workspace (Academic Intelligence):** Context-aware syllabus tutors, interactive revision flashcards, customizable quizzes, and study schedule generators.
+*   **Analytics & Insights:** Visual reports containing area, bar, and line charts tracking study durations, attendance rates, activity contribution heatmaps, and term GPA predictions.
+*   **Profile & Identity Hub:** Cover customizations, SVG profile completion rings, editable skill tag containers, checklist milestones, and personalization switches.
+*   **Global Command Center:** Universal search command palette (`Ctrl+K`) and slide-over notification drawer center.
+*   **Onboarding & Authentication:** Fullscreen welcome screen, switchable login/signup cards, password strength indicators, and a 7-step setup assistant.
 
 ---
 
@@ -24,6 +27,7 @@ SemesterOS is designed around an operating system metaphor to give you a unified
 *   **Framework:** React 19 + TypeScript + Vite 8
 *   **Styling:** Tailwind CSS v4 (native CSS variables support)
 *   **Animations:** Framer Motion 12 (smooth 60fps micro-animations)
+*   **Charts:** Recharts
 *   **Icons:** Lucide React
 
 ---
