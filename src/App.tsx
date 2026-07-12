@@ -13,6 +13,7 @@ import { AcademicEngineProvider } from '@/stores/AcademicEngine'
 import { ToastProvider } from '@/components/ui/Toast'
 
 const CourseDetail = lazy(() => import('@/pages/CourseDetail'))
+const Resources = lazy(() => import('@/pages/Resources'))
 
 export default function App() {
   return (
@@ -24,6 +25,23 @@ export default function App() {
               <Route index element={<Home />} />
               <Route path="planner" element={<Planner />} />
               <Route path="courses" element={<Courses />} />
+              <Route
+                path="resources"
+                element={
+                  <Suspense
+                    fallback={
+                      <div className="h-96 w-full flex flex-col justify-center items-center">
+                        <div className="animate-pulse space-y-4 w-full max-w-2xl bg-surface border border-border-subtle rounded-3xl p-8">
+                          <div className="h-8 bg-bg-tertiary rounded-xl w-1/3"></div>
+                          <div className="h-4 bg-bg-tertiary rounded-lg w-2/3"></div>
+                        </div>
+                      </div>
+                    }
+                  >
+                    <Resources />
+                  </Suspense>
+                }
+              />
               <Route
                 path="courses/:subjectId"
                 element={

@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   User,
+  Folder,
 } from 'lucide-react'
 import NavigationItem from './NavigationItem'
 import UserMenu from './UserMenu'
@@ -26,6 +27,7 @@ const menuItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/courses', label: 'Courses', icon: BookOpen },
   { path: '/planner', label: 'Planner', icon: CheckSquare },
+  { path: '/resources', label: 'Resources', icon: Folder },
   { path: '/timeline', label: 'Timeline', icon: Calendar },
   { path: '/insights', label: 'Analytics', icon: BarChart2 },
   { path: '/profile', label: 'Profile', icon: User },

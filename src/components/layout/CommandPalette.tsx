@@ -14,6 +14,7 @@ import {
   Moon,
   Sparkles,
   ArrowRight,
+  Folder,
 } from 'lucide-react'
 
 interface CommandPaletteProps {
@@ -68,6 +69,17 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
       category: 'Navigation',
       action: () => {
         navigate('/courses')
+        onClose()
+      },
+    },
+    {
+      id: 'nav-resources',
+      title: 'Go to Resources',
+      subtitle: 'View study files and notes',
+      icon: Folder,
+      category: 'Navigation',
+      action: () => {
+        navigate('/resources')
         onClose()
       },
     },
