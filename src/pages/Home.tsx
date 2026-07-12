@@ -35,6 +35,7 @@ import {
 import { cn } from '@/utils/cn'
 import { getTopicDeadlines, getTodayDateString } from '@/utils/homeHelpers'
 import { useToast } from '@/components/ui/Toast'
+import { useProfile } from '@/hooks/useProfile'
 
 const pageVariants = {
   hidden: { opacity: 0 },
@@ -80,6 +81,14 @@ export default function Home() {
   const { studySessions, createStudySession } = useStudyStore()
   const { semesterCompletion, currentStreak } = useAnalyticsStore()
   const { toast } = useToast()
+  const { profile } = useProfile()
+
+  const getGreeting = () => {
+    const hours = new Date().getHours()
+    if (hours < 12) return 'Good morning'
+    if (hours < 18) return 'Good afternoon'
+    return 'Good evening'
+  }
 
   const todayStr = getTodayDateString()
 
@@ -129,41 +138,54 @@ export default function Home() {
       className="min-h-full space-y-6 pb-8 text-left"
     >
       {/* 1. SEMESTER HEADER */}
-      <AnimatedCard className="overflow-hidden p-0 border-l-4 border-l-primary">
-        <div className="p-6 md:p-8">
-          <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border-subtle bg-bg-secondary px-3 py-1 text-xs font-bold text-primary shadow-subtle">
-                <Sparkles className="h-3.5 w-3.5" />
-                Academic Command Center
-              </div>
-              <h2 className="text-3xl font-bold tracking-tight text-text-primary md:text-4xl">
-                SemesterOS Command Center
-              </h2>
-              <p className="mt-2 text-xs text-text-secondary">
-                July 11, 2026 • <span className="font-bold text-text-primary">Semester III (AY {semester.academicYear})</span>
-              </p>
+      <AnimatedCard className="overflow-hidden border border-border-subtle bg-surface shadow-subtle p-6 md:p-8">
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-2xl space-y-4">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border-subtle bg-bg-secondary px-3 py-1 text-[10px] font-bold text-primary shadow-subtle uppercase tracking-wider">
+              <Sparkles className="h-3 w-3" />
+              Academic Command Center
             </div>
-
-            <div className="min-w-[220px] sm:min-w-[280px] rounded-2xl border border-border-subtle bg-bg-secondary/50 p-5">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary">
-                  Semester Completion
-                </p>
-                <span className="text-sm font-bold text-text-primary">{semesterCompletion}%</span>
-              </div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-bg-tertiary">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${semesterCompletion}%` }}
-                  transition={{ duration: 0.75, ease: 'easeOut' }}
-                  className="h-full rounded-full bg-gradient-to-r from-primary to-success"
+            <div className="flex items-center gap-4">
+              {profile.avatarUrl ? (
+                <img
+                  src={profile.avatarUrl}
+                  alt={profile.name}
+                  className="h-12 w-12 rounded-full object-cover border border-border-medium shadow-subtle shrink-0 hidden sm:block"
                 />
+              ) : (
+                <div className="h-12 w-12 rounded-full bg-accent-indigo text-white flex items-center justify-center font-bold text-lg shadow-subtle shrink-0 hidden sm:block">
+                  {profile.name.substring(0, 2).toUpperCase()}
+                </div>
+              )}
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight text-text-primary md:text-3xl">
+                  {getGreeting()}, {profile.name}.
+                </h2>
+                <p className="mt-1 text-xs text-text-secondary max-w-[55ch] text-wrap-pretty leading-relaxed">
+                  You have completed <span className="font-semibold text-text-primary">{semesterCompletion}%</span> of your semester targets. Keep pushing your <span className="font-semibold text-text-primary">{currentStreak}-day</span> streak!
+                </p>
               </div>
-              <div className="mt-2 flex justify-between text-[10px] font-bold text-text-secondary">
-                <span>{semesterCompletion}% done</span>
-                <span>Active Streak: {currentStreak} days</span>
-              </div>
+            </div>
+          </div>
+
+          <div className="min-w-[240px] sm:min-w-[300px] rounded-2xl border border-border-subtle bg-bg-secondary/40 p-5 shadow-subtle">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary">
+                Semester Completion
+              </p>
+              <span className="text-xs font-bold text-text-primary">{semesterCompletion}%</span>
+            </div>
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-bg-tertiary">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${semesterCompletion}%` }}
+                transition={{ duration: 0.75, ease: 'easeOut' }}
+                className="h-full rounded-full bg-primary"
+              />
+            </div>
+            <div className="mt-2.5 flex justify-between text-[9px] font-bold text-text-secondary">
+              <span>{new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+              <span>Term {semester.semester} (AY {semester.academicYear})</span>
             </div>
           </div>
         </div>
