@@ -2,22 +2,19 @@ import { motion } from 'framer-motion'
 import {
   ArrowRight,
   CalendarDays,
-  Clock3,
+  Clock,
   Sparkles,
-  Target,
-  AlertTriangle,
-  Play,
-  Check,
-  Calendar,
-  Bell,
-  Activity,
+  CheckSquare,
+  BookOpen,
   Flame,
+  Award,
+  ChevronRight,
+  TrendingUp,
 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import type { Course } from '@/models'
 import {
   useSemesterStore,
   useCourseStore,
@@ -25,19 +22,10 @@ import {
   useAnalyticsStore,
   useStudyStore,
 } from '@/stores/AcademicEngine'
-import {
-  getStudyRecommendations,
-  generateDailySchedule,
-  getWorkloadStats,
-  getCourseInsights,
-  getSmartNotifications,
-} from '@/services/StudyEngine'
-import { cn } from '@/utils/cn'
-import { getTopicDeadlines, getTodayDateString } from '@/utils/homeHelpers'
-import { useToast } from '@/components/ui/Toast'
 import { useProfile } from '@/hooks/useProfile'
 
-const pageVariants = {
+// Animation presets
+const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -45,44 +33,38 @@ const pageVariants = {
   },
 }
 
-const cardVariants = {
-  hidden: { opacity: 0, y: 15 },
-  visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 25 } as any },
-}
-
-function AnimatedCard({ className, children }: { className?: string; children: React.ReactNode }) {
-  return (
-    <motion.div variants={cardVariants} whileHover={{ y: -3 }}>
-      <Card className={cn('rounded-[24px] border-border-subtle bg-surface p-6 shadow-subtle backdrop-blur-xl', className)}>
-        {children}
-      </Card>
-    </motion.div>
-  )
-}
-
-function EmptyState({ message }: { message: string }) {
-  return (
-    <div className="flex min-h-24 flex-col items-center justify-center rounded-2xl border border-dashed border-border-medium bg-bg-secondary/40 px-4 py-6 text-center w-full">
-      <p className="text-xs font-semibold text-text-secondary">{message}</p>
-    </div>
-  )
-}
-
-function formatTopicDateStr(dateStr?: string) {
-  if (!dateStr) return ''
-  const date = new Date(dateStr)
-  return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { type: 'spring' as const, stiffness: 350, damping: 26 },
+  },
 }
 
 export default function Home() {
+  const navigate = useNavigate()
   const { semester } = useSemesterStore()
-  const { courses, updateTopicStatus } = useCourseStore()
+  const { courses } = useCourseStore()
   const { assignments } = useAssignmentStore()
-  const { studySessions, createStudySession } = useStudyStore()
+  const { studySessions } = useStudyStore()
   const { semesterCompletion, currentStreak } = useAnalyticsStore()
-  const { toast } = useToast()
   const { profile } = useProfile()
 
+  // Calculate dynamic stats
+  const coursesEnrolled = courses.length
+  const completedAssignmentsCount = assignments.filter((a) => a.status === 'completed').length
+  const pendingAssignmentsCount = assignments.filter((a) => a.status !== 'completed').length
+  const totalStudyMinutes = studySessions.reduce((sum, s) => sum + s.duration, 0)
+  const totalStudyHours = Math.round((totalStudyMinutes / 60) * 10) / 10
+
+  // Filter next 3 deadlines
+  const upcomingDeadlines = [...assignments]
+    .filter((a) => a.status !== 'completed')
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+    .slice(0, 3)
+
+  // Dynamic greeting
   const getGreeting = () => {
     const hours = new Date().getHours()
     if (hours < 12) return 'Good morning'
@@ -90,460 +72,364 @@ export default function Home() {
     return 'Good evening'
   }
 
-  const todayStr = getTodayDateString()
-
-  // 1. Study Recommendations from deterministic algorithm
-  const recommendations = getStudyRecommendations(courses, assignments, todayStr)
-  const topRec = recommendations[0]
-
-  // 2. Daily Study plan blocks derived from top recommendations and duration
-  const studySchedule = generateDailySchedule(recommendations)
-
-  // 3. Workload score & warning analyzer
-  const workload = getWorkloadStats(courses, assignments, todayStr)
-
-  // 4. course insights analyzer
-  const courseInsights = getCourseInsights(courses)
-
-  // 5. Smart notifications list
-  const smartNotifications = getSmartNotifications(courses, assignments, studySessions, todayStr)
-
-  // 6. Deadlines organizer
-  const deadlines = getTopicDeadlines(courses)
-
-  const handleStartStudy = (courseId: string, moduleId: string, topicId: string, topicTitle: string) => {
-    updateTopicStatus(courseId, moduleId, topicId, 'In Progress')
-    toast('Study Started', `Now studying "${topicTitle}"`, 'info')
-  }
-
-  const handleCompleteStudy = (courseId: string, moduleId: string, topicId: string, topicTitle: string, duration: number) => {
-    updateTopicStatus(courseId, moduleId, topicId, 'Completed')
-    // Log study session to global store to update stats and streaks
-    createStudySession({
-      date: todayStr,
-      subject: courses.find((s: Course) => s.id === courseId)?.name || 'Unknown',
-      duration: duration * 60,
-      completedTopics: [topicId],
-    })
-    toast('Topic Completed', `Completed "${topicTitle}" (+${duration} hrs)`, 'success')
-  }
-
-
-
   return (
     <motion.div
-      variants={pageVariants}
+      variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="min-h-full space-y-6 pb-8 text-left"
+      className="space-y-8 pb-12 text-left"
     >
-      {/* 1. SEMESTER HEADER */}
-      <AnimatedCard className="overflow-hidden border border-border-subtle bg-surface shadow-subtle p-6 md:p-8">
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="max-w-2xl space-y-4">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border-subtle bg-bg-secondary px-3 py-1 text-[10px] font-bold text-primary shadow-subtle uppercase tracking-wider">
-              <Sparkles className="h-3 w-3" />
-              Academic Command Center
-            </div>
-            <div className="flex items-center gap-4">
-              {profile.avatarUrl ? (
-                <img
-                  src={profile.avatarUrl}
-                  alt={profile.name}
-                  className="h-12 w-12 rounded-full object-cover border border-border-medium shadow-subtle shrink-0 hidden sm:block"
-                />
-              ) : (
-                <div className="h-12 w-12 rounded-full bg-accent-indigo text-white flex items-center justify-center font-bold text-lg shadow-subtle shrink-0 hidden sm:block">
-                  {profile.name.substring(0, 2).toUpperCase()}
+      {/* 1. TOP HERO SECTION */}
+      <motion.div variants={itemVariants}>
+        <Card className="overflow-hidden border border-border-subtle bg-surface shadow-subtle p-6 md:p-8">
+          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-2xl space-y-4">
+              <div className="inline-flex items-center gap-2 rounded-full border border-border-subtle bg-bg-secondary px-3 py-1 text-[10px] font-bold text-primary shadow-subtle uppercase tracking-wider">
+                <Sparkles className="h-3 w-3" />
+                Academic Command Center
+              </div>
+              <div className="flex items-center gap-4">
+                {profile.avatarUrl ? (
+                  <img
+                    src={profile.avatarUrl}
+                    alt={profile.name}
+                    className="h-12 w-12 rounded-full object-cover border border-border-medium shadow-subtle shrink-0 hidden sm:block"
+                  />
+                ) : (
+                  <div className="h-12 w-12 rounded-full bg-accent-indigo text-white flex items-center justify-center font-bold text-lg shadow-subtle shrink-0 hidden sm:block">
+                    {profile.name.substring(0, 2).toUpperCase()}
+                  </div>
+                )}
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight text-text-primary md:text-3xl">
+                    {getGreeting()}, {profile.name}.
+                  </h2>
+                  <p className="mt-1 text-xs text-text-secondary max-w-[55ch] text-wrap-pretty leading-relaxed">
+                    You have completed <span className="font-semibold text-text-primary">{semesterCompletion}%</span> of your semester targets. Keep pushing your <span className="font-semibold text-text-primary">{currentStreak}-day</span> streak!
+                  </p>
                 </div>
-              )}
-              <div>
-                <h2 className="text-2xl font-bold tracking-tight text-text-primary md:text-3xl">
-                  {getGreeting()}, {profile.name}.
-                </h2>
-                <p className="mt-1 text-xs text-text-secondary max-w-[55ch] text-wrap-pretty leading-relaxed">
-                  You have completed <span className="font-semibold text-text-primary">{semesterCompletion}%</span> of your semester targets. Keep pushing your <span className="font-semibold text-text-primary">{currentStreak}-day</span> streak!
+              </div>
+            </div>
+
+            <div className="min-w-[240px] sm:min-w-[300px] rounded-2xl border border-border-subtle bg-bg-secondary/40 p-5 shadow-subtle">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary">
+                  Semester Completion
                 </p>
+                <span className="text-xs font-bold text-text-primary">{semesterCompletion}%</span>
+              </div>
+              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-bg-tertiary">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${semesterCompletion}%` }}
+                  transition={{ duration: 0.75, ease: 'easeOut' }}
+                  className="h-full rounded-full bg-primary"
+                />
+              </div>
+              <div className="mt-2.5 flex justify-between text-[9px] font-bold text-text-secondary">
+                <span>{new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                <span>Term {semester.semester} (AY {semester.academicYear})</span>
               </div>
             </div>
           </div>
+        </Card>
+      </motion.div>
 
-          <div className="min-w-[240px] sm:min-w-[300px] rounded-2xl border border-border-subtle bg-bg-secondary/40 p-5 shadow-subtle">
-            <div className="flex items-center justify-between">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary">
-                Semester Completion
-              </p>
-              <span className="text-xs font-bold text-text-primary">{semesterCompletion}%</span>
-            </div>
-            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-bg-tertiary">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${semesterCompletion}%` }}
-                transition={{ duration: 0.75, ease: 'easeOut' }}
-                className="h-full rounded-full bg-primary"
-              />
-            </div>
-            <div className="mt-2.5 flex justify-between text-[9px] font-bold text-text-secondary">
-              <span>{new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-              <span>Term {semester.semester} (AY {semester.academicYear})</span>
-            </div>
+      {/* 2. QUICK STATS GRID */}
+      <motion.div variants={itemVariants} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="rounded-[20px] border-border-subtle bg-bg-primary p-5 shadow-subtle flex items-center gap-4">
+          <div className="rounded-xl bg-accent-blue/10 p-2.5 text-accent-blue">
+            <BookOpen className="h-5 w-5" />
           </div>
-        </div>
-      </AnimatedCard>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary">Courses</p>
+            <h4 className="text-xl font-extrabold text-text-primary mt-0.5 font-mono">{coursesEnrolled}</h4>
+          </div>
+        </Card>
 
-      {/* 2. RECS & PLAN + WORKLOAD & NOTIFICATIONS */}
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+        <Card className="rounded-[20px] border-border-subtle bg-bg-primary p-5 shadow-subtle flex items-center gap-4">
+          <div className="rounded-xl bg-accent-indigo/10 p-2.5 text-accent-indigo">
+            <CheckSquare className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary">Done Tasks</p>
+            <h4 className="text-xl font-extrabold text-text-primary mt-0.5 font-mono">{completedAssignmentsCount}</h4>
+          </div>
+        </Card>
+
+        <Card className="rounded-[20px] border-border-subtle bg-bg-primary p-5 shadow-subtle flex items-center gap-4">
+          <div className="rounded-xl bg-accent-rose/10 p-2.5 text-accent-rose">
+            <CalendarDays className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary">Upcoming Deadlines</p>
+            <h4 className="text-xl font-extrabold text-text-primary mt-0.5 font-mono">{pendingAssignmentsCount}</h4>
+          </div>
+        </Card>
+
+        <Card className="rounded-[20px] border-border-subtle bg-bg-primary p-5 shadow-subtle flex items-center gap-4">
+          <div className="rounded-xl bg-accent-teal/10 p-2.5 text-accent-teal">
+            <Clock className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary">Study Hours</p>
+            <h4 className="text-xl font-extrabold text-text-primary mt-0.5 font-mono">{totalStudyHours}h</h4>
+          </div>
+        </Card>
+      </motion.div>
+
+      {/* 3. CORE CONTENT GRID */}
+      <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
+        
+        {/* LEFT COLUMN: COURSE PROGRESS & DEADLINES */}
         <div className="space-y-6">
-          {/* Study Recommendation Widget */}
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
-            <Card className="rounded-[24px] border-border-subtle bg-surface p-6 shadow-subtle border-l-4 border-l-primary space-y-4">
-              <div className="flex items-center justify-between border-b border-border-subtle pb-4">
-                <div className="flex items-center gap-2">
-                  <div className="rounded-xl bg-primary/10 p-2 text-primary">
-                    <Target className="h-4.5 w-4.5" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-text-primary">📚 Study Recommendation</h3>
-                    <p className="text-[10px] text-text-secondary">Smart lesson plan prioritization</p>
-                  </div>
-                </div>
-                <Badge variant="indigo">Syllabus Engine</Badge>
-              </div>
+          {/* COURSE PROGRESS SECTION */}
+          <motion.div variants={itemVariants} className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-text-primary flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-primary" />
+                Active Course Progress
+              </h3>
+              <Link to="/courses" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
+                View All <ChevronRight className="h-3 w-3" />
+              </Link>
+            </div>
 
-              {topRec ? (
-                <div className="grid gap-6 md:grid-cols-[1fr_auto]">
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: topRec.course.color }} />
-                      <span className="text-[9px] font-bold uppercase tracking-wider text-text-secondary">
-                        {topRec.course.code} • {topRec.course.name}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="text-xs text-text-secondary">{topRec.module.title}</p>
-                      <h4 className="text-base font-bold text-text-primary mt-0.5">{topRec.topic.title}</h4>
-                    </div>
-                    <p className="text-xs italic text-primary bg-primary/5 rounded-lg px-3 py-2 border border-primary/10">
-                      &ldquo;{topRec.reason}&rdquo;
-                    </p>
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-semibold text-text-secondary">
-                      <span className="flex items-center gap-1">
-                        <Clock3 className="h-3.5 w-3.5 text-text-tertiary" />
-                        Est. Time: {topRec.estimatedTime} hrs
-                      </span>
-                      {topRec.deadline && (
-                        <span className="flex items-center gap-1">
-                          <CalendarDays className="h-3.5 w-3.5 text-text-tertiary" />
-                          Due: {formatTopicDateStr(topRec.deadline)}
+            <div className="grid gap-4 sm:grid-cols-2">
+              {courses.map((course) => {
+                // Calculate topic progress count
+                let totalTopics = 0
+                let doneTopics = 0
+                course.modules.forEach((m) => {
+                  m.topics.forEach((t) => {
+                    totalTopics++
+                    if (t.status === 'Completed') doneTopics++
+                  })
+                })
+
+                return (
+                  <Card
+                    key={course.id}
+                    className="group rounded-2xl border border-border-subtle bg-surface p-5 shadow-subtle flex flex-col justify-between space-y-4 hover:border-border-medium hover:shadow-soft transition-all duration-200"
+                  >
+                    <div className="space-y-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: course.color }} />
+                        <span className="text-[9px] font-extrabold uppercase tracking-wider text-text-secondary">
+                          {course.code}
                         </span>
-                      )}
-                      <span className="flex items-center gap-1">
-                        <Flame className="h-3.5 w-3.5 text-text-tertiary" />
-                        Urgency Score: {topRec.urgencyScore}
-                      </span>
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-text-primary group-hover:text-primary transition-colors line-clamp-1">
+                          {course.name}
+                        </h4>
+                        <p className="text-[10px] text-text-secondary mt-0.5">Faculty: {course.faculty}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex flex-col sm:flex-row md:flex-col justify-center gap-2">
-                    <button
-                      onClick={() => handleStartStudy(topRec.course.id, topRec.module.id, topRec.topic.id, topRec.topic.title)}
-                      className={cn(
-                        'inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold shadow-subtle border border-border-subtle hover:bg-bg-secondary transition-all cursor-pointer',
-                        topRec.topic.status === 'In Progress' ? 'bg-warning/10 text-warning border-warning/20' : 'bg-bg-primary text-text-primary'
-                      )}
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-[10px] text-text-secondary">
+                        <span>Syllabus Progress</span>
+                        <span className="font-bold text-text-primary">{course.progress}%</span>
+                      </div>
+                      <div className="h-1 bg-bg-secondary rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${course.progress}%`, backgroundColor: course.color }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-[9px] text-text-tertiary font-medium">
+                        <span>{doneTopics} of {totalTopics} topics</span>
+                        <span>Attendance: {course.attendance}%</span>
+                      </div>
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/courses/${course.id}`)}
+                      className="w-full justify-between group-hover:border-primary/20 hover:bg-bg-secondary text-[11px] font-semibold"
                     >
-                      <Play className="h-3.5 w-3.5" />
-                      {topRec.topic.status === 'In Progress' ? 'Studying' : 'Start Study'}
-                    </button>
-                    <button
-                      onClick={() => handleCompleteStudy(topRec.course.id, topRec.module.id, topRec.topic.id, topRec.topic.title, topRec.estimatedTime)}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white shadow-soft hover:bg-primary-hover transition-colors cursor-pointer"
-                    >
-                      <Check className="h-3.5 w-3.5" />
-                      Mark Completed
-                    </button>
-                  </div>
+                      Continue Learning
+                      <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                    </Button>
+                  </Card>
+                )
+              })}
+            </div>
+          </motion.div>
+
+          {/* UPCOMING DEADLINES SECTION */}
+          <motion.div variants={itemVariants} className="space-y-4">
+            <h3 className="text-sm font-bold text-text-primary flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-accent-rose" />
+              Upcoming Planner Deadlines
+            </h3>
+
+            <Card className="rounded-[24px] border-border-subtle bg-surface p-5 shadow-subtle space-y-4">
+              {upcomingDeadlines.length > 0 ? (
+                <div className="divide-y divide-border-subtle">
+                  {upcomingDeadlines.map((deadline) => {
+                    const matchedCourse = courses.find((c) => c.id === deadline.subjectId)
+                    return (
+                      <div key={deadline.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                        <div className="flex items-start gap-3">
+                          <span
+                            className="h-3 w-3 rounded-full mt-1.5 shrink-0"
+                            style={{ backgroundColor: matchedCourse?.color || '#2563EB' }}
+                          />
+                          <div>
+                            <h4 className="text-xs font-bold text-text-primary">{deadline.title}</h4>
+                            <p className="text-[10px] text-text-secondary mt-0.5">
+                              {matchedCourse?.name} • {deadline.estimatedHours}h estimated
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3.5 self-end sm:self-center">
+                          <Badge
+                            variant={
+                              deadline.priority === 'urgent'
+                                ? 'rose'
+                                : deadline.priority === 'high'
+                                ? 'orange'
+                                : 'indigo'
+                            }
+                          >
+                            {deadline.priority}
+                          </Badge>
+                          <span className="text-[11px] font-semibold text-text-secondary">
+                            {new Date(deadline.dueDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               ) : (
-                <EmptyState message="All topics completed! Enjoy your break." />
+                <div className="py-8 text-center text-xs text-text-secondary">
+                  No upcoming deadlines due.
+                </div>
               )}
             </Card>
           </motion.div>
-
-          {/* Today's Study Plan Widget */}
-          <AnimatedCard>
-            <div className="mb-4 flex items-center justify-between border-b border-border-subtle pb-4">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary">Chronological Schedule</p>
-                <h3 className="text-sm font-bold text-text-primary mt-0.5">Today&apos;s Study Plan</h3>
-              </div>
-              <Calendar className="h-4.5 w-4.5 text-primary" />
-            </div>
-
-            {studySchedule.length > 0 ? (
-              <div className="relative border-l border-l-border-medium pl-5 space-y-4 ml-2">
-                {studySchedule.map((block, idx) => (
-                  <div key={idx} className="relative">
-                    <span className="absolute -left-[30px] top-1.5 h-2.5 w-2.5 rounded-full border border-surface shadow-subtle ring-4 ring-primary/10" style={{ backgroundColor: block.course.color }} />
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-bg-secondary/40 p-3.5 rounded-xl border border-border-subtle">
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[9px] font-bold uppercase text-text-secondary">{block.course.code}</span>
-                          <span className="text-[9px] text-text-tertiary">•</span>
-                          <span className="text-[9px] font-bold text-primary">{block.timeSlot}</span>
-                        </div>
-                        <h4 className="text-xs font-semibold text-text-primary mt-0.5">{block.topic.title}</h4>
-                      </div>
-                      <Badge variant="indigo">Estimated {block.topic.estimatedStudyTime || 1.5}h</Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <EmptyState message="No study blocks scheduled. You are completely caught up!" />
-            )}
-          </AnimatedCard>
         </div>
 
+        {/* RIGHT COLUMN: SCHEDULE, PRODUCTIVITY & RECENT ACTIVITIES */}
         <div className="space-y-6">
-          {/* Workload Score Widget */}
-          <AnimatedCard>
-            <div className="mb-4 flex items-center justify-between border-b border-border-subtle pb-4">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary">Workload Score</p>
-                <h3 className="text-sm font-bold text-text-primary mt-0.5">Academic Balance Indicator</h3>
-              </div>
-              <Activity className="h-4.5 w-4.5 text-primary" />
-            </div>
+          {/* TODAY'S CLASS SCHEDULE */}
+          <motion.div variants={itemVariants} className="space-y-4">
+            <h3 className="text-sm font-bold text-text-primary flex items-center gap-2">
+              <Clock className="h-4 w-4 text-accent-indigo" />
+              Today's Lectures
+            </h3>
 
-            <div className="flex flex-col sm:flex-row items-center gap-6">
-              {/* Circular Gauge */}
-              <div className="relative h-20 w-20 shrink-0">
-                <svg className="h-full w-full -rotate-90">
-                  <circle cx="40" cy="40" r="34" className="stroke-border-medium fill-transparent stroke-[5]" />
-                  <motion.circle
-                    cx="40"
-                    cy="40"
-                    r="34"
-                    className="fill-transparent stroke-[5] transition-all"
-                    style={{
-                      strokeDasharray: 2 * Math.PI * 34,
-                      strokeDashoffset: 2 * Math.PI * 34 - (workload.score / 100) * (2 * Math.PI * 34),
-                    }}
-                    stroke={`var(--${workload.color})`}
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center flex-col">
-                  <span className="text-sm font-bold text-text-primary leading-none">{workload.score}%</span>
+            <Card className="rounded-[24px] border-border-subtle bg-surface p-5 shadow-subtle space-y-4">
+              <div className="relative pl-5 border-l border-border-medium space-y-5">
+                <div className="relative">
+                  <div className="absolute -left-[27px] top-1.5 h-2.5 w-2.5 rounded-full bg-accent-blue border-2 border-white dark:border-bg-primary" />
+                  <div className="flex justify-between items-start text-xs">
+                    <div>
+                      <h4 className="font-bold text-text-primary">Object Oriented Programming</h4>
+                      <p className="text-[10px] text-text-secondary mt-0.5">Lecture Room 402 • Theory Session</p>
+                    </div>
+                    <span className="text-[10px] font-semibold text-accent-blue bg-accent-blue/10 px-1.5 py-0.5 rounded-lg shrink-0">
+                      09:00 AM
+                    </span>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <div className="absolute -left-[27px] top-1.5 h-2.5 w-2.5 rounded-full bg-accent-indigo border-2 border-white dark:border-bg-primary" />
+                  <div className="flex justify-between items-start text-xs">
+                    <div>
+                      <h4 className="font-bold text-text-primary">Data Structures Lab</h4>
+                      <p className="text-[10px] text-text-secondary mt-0.5">Systems Lab 3 • Practical Session</p>
+                    </div>
+                    <span className="text-[10px] font-semibold text-text-secondary bg-bg-secondary px-1.5 py-0.5 rounded-lg shrink-0">
+                      11:30 AM
+                    </span>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <div className="absolute -left-[27px] top-1.5 h-2.5 w-2.5 rounded-full bg-accent-indigo border-2 border-white dark:border-bg-primary" />
+                  <div className="flex justify-between items-start text-xs">
+                    <div>
+                      <h4 className="font-bold text-text-primary">Computer Organization</h4>
+                      <p className="text-[10px] text-text-secondary mt-0.5">Lecture Room 201 • Theory Session</p>
+                    </div>
+                    <span className="text-[10px] font-semibold text-text-secondary bg-bg-secondary px-1.5 py-0.5 rounded-lg shrink-0">
+                      02:00 PM
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+
+          {/* PRODUCTIVITY & HABIT PANEL */}
+          <motion.div variants={itemVariants} className="space-y-4">
+            <h3 className="text-sm font-bold text-text-primary flex items-center gap-2">
+              <Award className="h-4 w-4 text-accent-amber" />
+              Focus & Productivity
+            </h3>
+
+            <Card className="rounded-[24px] border-border-subtle bg-surface p-5 shadow-subtle space-y-4">
+              <div className="flex items-center gap-4 justify-between">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider">Productivity Score</span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-2xl font-extrabold text-text-primary font-mono">94</span>
+                    <span className="text-xs font-semibold text-accent-teal flex items-center gap-0.5">
+                      <TrendingUp className="h-3.5 w-3.5" /> +2%
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-text-secondary">Based on lesson completions & streaks.</p>
+                </div>
+                <div className="relative h-16 w-16 shrink-0 flex items-center justify-center">
+                  <svg className="absolute transform -rotate-90 w-full h-full">
+                    <circle
+                      cx="32"
+                      cy="32"
+                      r="26"
+                      stroke="var(--border-subtle)"
+                      strokeWidth="4"
+                      fill="transparent"
+                    />
+                    <circle
+                      cx="32"
+                      cy="32"
+                      r="26"
+                      stroke="var(--primary)"
+                      strokeWidth="4"
+                      fill="transparent"
+                      strokeDasharray={2 * Math.PI * 26}
+                      strokeDashoffset={2 * Math.PI * 26 * (1 - 0.94)}
+                    />
+                  </svg>
+                  <span className="text-xs font-extrabold text-primary">94%</span>
                 </div>
               </div>
 
-              <div className="space-y-1.5 flex-1 text-center sm:text-left">
-                <div className="flex items-center justify-center sm:justify-start gap-2">
-                  <span className="text-sm font-bold text-text-primary">Status:</span>
-                  <Badge
-                    variant={
-                      workload.color === 'success' ? 'teal' :
-                      workload.color === 'danger' ? 'rose' :
-                      'orange'
-                    }
-                  >
-                    {workload.label}
-                  </Badge>
+              <div className="grid grid-cols-2 gap-3 border-t border-border-subtle pt-4">
+                <div className="bg-bg-secondary/40 rounded-xl p-3 text-center">
+                  <p className="text-[9px] uppercase font-bold text-text-tertiary tracking-wider">Active Streak</p>
+                  <p className="text-base font-extrabold text-text-primary mt-1 flex items-center justify-center gap-1">
+                    <Flame className="h-4 w-4 text-accent-rose fill-accent-rose" /> {currentStreak} days
+                  </p>
                 </div>
-                <p className="text-xs text-text-secondary">
-                  <strong>{workload.totalStudyHours} hours</strong> of estimated syllabus study due this week.
-                </p>
-              </div>
-            </div>
-
-            {/* Heavy workload Alert */}
-            {workload.hasWarning && (
-              <div className="mt-4 rounded-xl border border-danger/20 bg-danger/5 p-3 text-xs text-danger flex items-start gap-2">
-                <AlertTriangle className="h-4.5 w-4.5 shrink-0 mt-0.5" />
-                <p className="leading-relaxed font-semibold">{workload.warningMessage}</p>
-              </div>
-            )}
-          </AnimatedCard>
-
-          {/* Smart Notifications Widget */}
-          <AnimatedCard>
-            <div className="mb-4 flex items-center justify-between border-b border-border-subtle pb-4">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary">Real-time alerts</p>
-                <h3 className="text-sm font-bold text-text-primary mt-0.5">Smart System Notifications</h3>
-              </div>
-              <Bell className="h-4.5 w-4.5 text-primary" />
-            </div>
-
-            <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
-              {smartNotifications.map((notif, idx) => (
-                <div key={idx} className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-3 text-[11px] leading-relaxed text-text-secondary flex gap-2.5 items-start">
-                  <div className="h-2 w-2 rounded-full bg-primary shrink-0 mt-1.5" />
-                  <p>{notif}</p>
+                <div className="bg-bg-secondary/40 rounded-xl p-3 text-center">
+                  <p className="text-[9px] uppercase font-bold text-text-tertiary tracking-wider">Study Sessions</p>
+                  <p className="text-base font-extrabold text-text-primary mt-1 font-mono">
+                    {studySessions.length}
+                  </p>
                 </div>
-              ))}
-              {smartNotifications.length === 0 && (
-                <EmptyState message="All notification channels clear." />
-              )}
-            </div>
-          </AnimatedCard>
+              </div>
+            </Card>
+          </motion.div>
         </div>
+
       </div>
-
-      {/* 3. TIMELINE & DEADLINE INSIGHTS */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Deadline Insights */}
-        <AnimatedCard>
-          <div className="mb-4 flex items-center justify-between border-b border-border-subtle pb-4">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary">Deadline Engine</p>
-              <h3 className="text-sm font-bold text-text-primary mt-0.5">Topic Deadlines</h3>
-            </div>
-            <AlertTriangle className="h-4.5 w-4.5 text-danger" />
-          </div>
-
-          <div className="space-y-4">
-            {/* Overdue */}
-            {deadlines.overdue.length > 0 && (
-              <div className="space-y-2">
-                <span className="text-[10px] font-bold uppercase text-danger block">⚠️ Overdue ({deadlines.overdue.length})</span>
-                <div className="space-y-2">
-                  {deadlines.overdue.map((dl) => (
-                    <div key={dl.topic.id} className="flex justify-between items-center rounded-xl bg-danger/5 border border-danger/10 p-3 text-xs">
-                      <div>
-                        <span className="text-[9px] font-bold uppercase text-danger">{dl.course.code}</span>
-                        <h4 className="font-semibold text-text-primary">{dl.topic.title}</h4>
-                      </div>
-                      <Badge variant="rose">Overdue</Badge>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Today */}
-            <div className="space-y-2">
-              <span className="text-[10px] font-bold uppercase text-warning block">Today ({deadlines.today.filter(t => t.topic.status !== 'Completed').length})</span>
-              {deadlines.today.length > 0 ? (
-                <div className="space-y-2">
-                  {deadlines.today.map((dl) => (
-                    <div key={dl.topic.id} className="flex justify-between items-center rounded-xl bg-bg-secondary/60 border border-border-subtle p-3 text-xs">
-                      <div>
-                        <span className="text-[9px] font-bold uppercase text-text-secondary">{dl.course.code}</span>
-                        <h4 className="font-semibold text-text-primary">{dl.topic.title}</h4>
-                      </div>
-                      <Badge variant="orange">Today</Badge>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-[10px] text-text-secondary pl-2">No topic deadlines due today.</p>
-              )}
-            </div>
-
-            {/* Upcoming */}
-            <div className="space-y-2">
-              <span className="text-[10px] font-bold uppercase text-primary block">Upcoming ({deadlines.upcoming.length})</span>
-              {deadlines.upcoming.length > 0 ? (
-                <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
-                  {deadlines.upcoming.map((dl) => (
-                    <div key={dl.topic.id} className="flex justify-between items-center rounded-xl bg-bg-secondary/40 border border-border-subtle p-3 text-xs">
-                      <div>
-                        <span className="text-[9px] font-bold uppercase text-text-secondary">{dl.course.code}</span>
-                        <h4 className="font-semibold text-text-primary">{dl.topic.title}</h4>
-                      </div>
-                      <Badge variant="secondary">{formatTopicDateStr(dl.dueDate)}</Badge>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-[10px] text-text-secondary pl-2">No upcoming topic deadlines.</p>
-              )}
-            </div>
-          </div>
-        </AnimatedCard>
-
-        {/* course Insights */}
-        <AnimatedCard>
-          <div className="mb-4 flex items-center justify-between border-b border-border-subtle pb-4">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary">Overview Analysis</p>
-              <h3 className="text-sm font-bold text-text-primary mt-0.5">course Insights</h3>
-            </div>
-            <Activity className="h-4.5 w-4.5 text-primary" />
-          </div>
-
-          <div className="space-y-3 divide-y divide-border-subtle">
-            {courseInsights.needingAttention && (
-              <div className="flex justify-between items-center py-2.5 first:pt-0">
-                <div>
-                  <h4 className="text-xs font-bold text-text-primary">Needing Attention</h4>
-                  <p className="text-[10px] text-text-secondary">Lowest attendance / progress index</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: courseInsights.needingAttention.color }} />
-                  <Badge variant="rose">{courseInsights.needingAttention.code}</Badge>
-                </div>
-              </div>
-            )}
-
-            {courseInsights.fastestImproving && (
-              <div className="flex justify-between items-center py-2.5">
-                <div>
-                  <h4 className="text-xs font-bold text-text-primary">Leading Syllabus</h4>
-                  <p className="text-[10px] text-text-secondary">Highest completed progress</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: courseInsights.fastestImproving.color }} />
-                  <Badge variant="teal">{courseInsights.fastestImproving.code}</Badge>
-                </div>
-              </div>
-            )}
-
-            {courseInsights.leastCompleted && (
-              <div className="flex justify-between items-center py-2.5">
-                <div>
-                  <h4 className="text-xs font-bold text-text-primary">Least Completed</h4>
-                  <p className="text-[10px] text-text-secondary">Lowest syllabus progress</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: courseInsights.leastCompleted.color }} />
-                  <Badge variant="orange">{courseInsights.leastCompleted.code}</Badge>
-                </div>
-              </div>
-            )}
-
-            {courseInsights.mostPendingTopics && (
-              <div className="flex justify-between items-center py-2.5 last:pb-0">
-                <div>
-                  <h4 className="text-xs font-bold text-text-primary">Most Incomplete Topics</h4>
-                  <p className="text-[10px] text-text-secondary">Highest volume of remaining lessons</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: courseInsights.mostPendingTopics.color }} />
-                  <Badge variant="indigo">{courseInsights.mostPendingTopics.code}</Badge>
-                </div>
-              </div>
-            )}
-          </div>
-        </AnimatedCard>
-      </div>
-
-      {/* Quick Actions & Showcase Redirect */}
-      <AnimatedCard>
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div>
-            <h4 className="text-xs font-bold text-text-primary uppercase tracking-wider text-[10px]">Component Library Live Preview</h4>
-            <p className="text-xs text-text-secondary mt-0.5">Explore the Storybook-like preview catalog page to inspect all components.</p>
-          </div>
-          <Link to="/showcase" className="shrink-0">
-            <Button className="gap-1.5" variant="outline">
-              Open Component Showcase <ArrowRight className="h-3.5 w-3.5" />
-            </Button>
-          </Link>
-        </div>
-      </AnimatedCard>
     </motion.div>
   )
 }
