@@ -1,9 +1,9 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import AppShell from '@/components/layout/AppShell'
 import Home from '@/pages/Home'
 import Planner from '@/pages/Planner'
 import Courses from '@/pages/Courses'
-import CourseDetail from '@/pages/CourseDetail'
 import Timeline from '@/pages/Timeline'
 import Insights from '@/pages/Insights'
 import Preferences from '@/pages/Preferences'
@@ -11,6 +11,8 @@ import Showcase from '@/pages/Showcase'
 import Profile from '@/pages/Profile'
 import { AcademicEngineProvider } from '@/stores/AcademicEngine'
 import { ToastProvider } from '@/components/ui/Toast'
+
+const CourseDetail = lazy(() => import('@/pages/CourseDetail'))
 
 export default function App() {
   return (
@@ -22,7 +24,28 @@ export default function App() {
               <Route index element={<Home />} />
               <Route path="planner" element={<Planner />} />
               <Route path="courses" element={<Courses />} />
-              <Route path="courses/:subjectId" element={<CourseDetail />} />
+              <Route
+                path="courses/:subjectId"
+                element={
+                  <Suspense
+                    fallback={
+                      <div className="h-96 w-full flex flex-col justify-center items-center space-y-6">
+                        <div className="animate-pulse space-y-4 w-full max-w-2xl bg-surface border border-border-subtle rounded-3xl p-8">
+                          <div className="h-8 bg-bg-tertiary rounded-xl w-1/3"></div>
+                          <div className="h-4 bg-bg-tertiary rounded-lg w-2/3"></div>
+                          <div className="space-y-3 pt-6">
+                            <div className="h-3 bg-bg-tertiary rounded-lg w-full"></div>
+                            <div className="h-3 bg-bg-tertiary rounded-lg w-5/6"></div>
+                            <div className="h-3 bg-bg-tertiary rounded-lg w-4/5"></div>
+                          </div>
+                        </div>
+                      </div>
+                    }
+                  >
+                    <CourseDetail />
+                  </Suspense>
+                }
+              />
               <Route path="timeline" element={<Timeline />} />
               <Route path="insights" element={<Insights />} />
               <Route path="preferences" element={<Preferences />} />
