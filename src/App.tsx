@@ -11,6 +11,7 @@ import Showcase from '@/pages/Showcase'
 import Profile from '@/pages/Profile'
 import { AcademicEngineProvider } from '@/stores/AcademicEngine'
 import { ToastProvider } from '@/components/ui/Toast'
+import ErrorBoundary from '@/components/ErrorBoundary'
 
 const CourseDetail = lazy(() => import('@/pages/CourseDetail'))
 const Resources = lazy(() => import('@/pages/Resources'))
@@ -18,12 +19,14 @@ const Ai = lazy(() => import('@/pages/Ai'))
 const Welcome = lazy(() => import('@/pages/Welcome'))
 const Auth = lazy(() => import('@/pages/Auth'))
 const Onboarding = lazy(() => import('@/pages/Onboarding'))
+const NotFound = lazy(() => import('@/pages/NotFound'))
 
 export default function App() {
   return (
-    <AcademicEngineProvider>
-      <ToastProvider>
-        <BrowserRouter basename="/semesteros">
+    <ErrorBoundary>
+      <AcademicEngineProvider>
+        <ToastProvider>
+          <BrowserRouter basename="/semesteros">
           <Routes>
             <Route
               path="welcome"
@@ -131,9 +134,18 @@ export default function App() {
               <Route path="showcase" element={<Showcase />} />
               <Route path="profile" element={<Profile />} />
             </Route>
+            <Route
+              path="*"
+              element={
+                <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center font-bold">Loading...</div>}>
+                  <NotFound />
+                </Suspense>
+              }
+            />
           </Routes>
         </BrowserRouter>
       </ToastProvider>
     </AcademicEngineProvider>
+  </ErrorBoundary>
   )
 }
