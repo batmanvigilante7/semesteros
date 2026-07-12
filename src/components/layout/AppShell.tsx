@@ -5,7 +5,7 @@ import Sidebar from './Sidebar'
 import Header from './Header'
 import CommandPalette from './CommandPalette'
 
-export default function MainLayout() {
+export default function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     return localStorage.getItem('sidebar_collapsed') === 'true'
@@ -73,18 +73,6 @@ export default function MainLayout() {
           </NavLink>
 
           <NavLink
-            to="/planner"
-            className={({ isActive }) =>
-              `flex flex-col items-center justify-center gap-1 text-[10px] font-semibold transition-colors duration-200 ${
-                isActive ? 'text-accent-blue' : 'text-text-secondary'
-              }`
-            }
-          >
-            <CheckSquare className="h-5 w-5" />
-            <span>Planner</span>
-          </NavLink>
-
-          <NavLink
             to="/courses"
             className={({ isActive }) =>
               `flex flex-col items-center justify-center gap-1 text-[10px] font-semibold transition-colors duration-200 ${
@@ -94,6 +82,18 @@ export default function MainLayout() {
           >
             <BookOpen className="h-5 w-5" />
             <span>Courses</span>
+          </NavLink>
+
+          <NavLink
+            to="/planner"
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center gap-1 text-[10px] font-semibold transition-colors duration-200 ${
+                isActive ? 'text-accent-blue' : 'text-text-secondary'
+              }`
+            }
+          >
+            <CheckSquare className="h-5 w-5" />
+            <span>Planner</span>
           </NavLink>
 
           <button

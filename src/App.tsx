@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import MainLayout from '@/components/layout/MainLayout'
+import AppShell from '@/components/layout/AppShell'
 import Home from '@/pages/Home'
 import Planner from '@/pages/Planner'
 import Courses from '@/pages/Courses'
@@ -18,7 +18,7 @@ export default function App() {
       <ToastProvider>
         <BrowserRouter basename="/semesteros">
           <Routes>
-            <Route path="/" element={<MainLayout />}>
+            <Route path="/" element={<AppShell />}>
               <Route index element={<Home />} />
               <Route path="planner" element={<Planner />} />
               <Route path="courses" element={<Courses />} />
