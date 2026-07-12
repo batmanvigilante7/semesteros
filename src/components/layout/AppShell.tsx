@@ -4,6 +4,7 @@ import { LayoutDashboard, CheckSquare, BookOpen, Menu } from 'lucide-react'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import CommandPalette from './CommandPalette'
+import NotificationCenter from './NotificationCenter'
 
 export default function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -11,6 +12,7 @@ export default function AppShell() {
     return localStorage.getItem('sidebar_collapsed') === 'true'
   })
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
 
   useEffect(() => {
     localStorage.setItem('sidebar_collapsed', String(sidebarCollapsed))
@@ -49,7 +51,10 @@ export default function AppShell() {
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top Navbar */}
-        <Header onMenuOpen={() => setSidebarOpen(true)} />
+        <Header
+          onMenuOpen={() => setSidebarOpen(true)}
+          onNotificationOpen={() => setNotificationsOpen(true)}
+        />
 
         {/* Scrollable Page Container */}
         <main className="flex-1 overflow-y-auto px-6 py-8 md:px-8">
@@ -110,6 +115,12 @@ export default function AppShell() {
       <CommandPalette
         isOpen={commandPaletteOpen}
         onClose={() => setCommandPaletteOpen(false)}
+      />
+
+      {/* Notification Center slide-over drawer */}
+      <NotificationCenter
+        isOpen={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
       />
     </div>
   )

@@ -5,9 +5,10 @@ import ThemeToggle from './ThemeToggle'
 
 interface HeaderProps {
   onMenuOpen: () => void
+  onNotificationOpen: () => void
 }
 
-export default function Header({ onMenuOpen }: HeaderProps) {
+export default function Header({ onMenuOpen, onNotificationOpen }: HeaderProps) {
   return (
     <header className="flex h-16 items-center justify-between border-b border-border-subtle bg-bg-primary px-6 shadow-subtle z-30 select-none">
       {/* Mobile Toggle & Breadcrumb Navigation */}
@@ -34,6 +35,7 @@ export default function Header({ onMenuOpen }: HeaderProps) {
 
         {/* Notifications Icon (Mock indicator badge) */}
         <button
+          onClick={onNotificationOpen}
           className="relative rounded-xl p-2 text-text-secondary hover:bg-bg-secondary hover:text-text-primary transition-all duration-200 cursor-pointer"
           aria-label="View notifications center"
         >
