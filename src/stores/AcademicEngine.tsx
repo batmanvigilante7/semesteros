@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react'
 import type { Semester, Subject, Assignment, StudySession, Topic, Module, SubjectResource, SubjectNote } from '@/models'
 import { defaultSemester } from '@/data/semester'
-import { defaultSubjectsRaw } from '@/data/subjects'
 
 // Storage Keys
 const SEMESTER_KEY = 'semesteros.semester.v1'
@@ -10,81 +9,54 @@ const ASSIGNMENTS_KEY = 'semesteros.assignments.v1'
 const STUDY_KEY = 'semesteros.study.v1'
 
 // Initial Seeds
-const initialAssignments: Assignment[] = [
-  {
-    id: 'asgn-1',
-    title: 'Complete OOP Assignment',
-    subjectId: 'course-oop-theory',
-    dueDate: new Date().toISOString().split('T')[0], // Today
-    priority: 'high',
-    status: 'pending',
-    estimatedHours: 2,
-    marks: 10,
-    description: 'Finish inheritance and polymorphism problems before lab review.',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'asgn-2',
-    title: 'Prepare COA Quiz Notes',
-    subjectId: 'course-coa',
-    dueDate: new Date().toISOString().split('T')[0], // Today
-    priority: 'urgent',
-    status: 'in_progress',
-    estimatedHours: 1.5,
-    description: 'Revise instruction pipelining, hazards, and cache basics.',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'asgn-3',
-    title: 'Update Statistics Notes',
-    subjectId: 'course-math',
-    dueDate: '2026-07-09', // Overdue
-    priority: 'medium',
-    status: 'completed',
-    estimatedHours: 1.0,
-    description: 'Clean up probability distributions and expectation examples.',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-]
-
-const initialStudySessions: StudySession[] = [
-  { id: 'sess-1', date: '2026-07-09', subject: 'Data Structures', duration: 90, completedTopics: ['ds-t1'] },
-  { id: 'sess-2', date: '2026-07-10', subject: 'Object Oriented Programming', duration: 60, completedTopics: ['oop-t3'] },
-]
+const initialAssignments: Assignment[] = []
+const initialStudySessions: StudySession[] = []
 
 // Helper: Recalculate module progress & status and subject progress
 export function recalculateSubject(subject: Subject): Subject {
-  let totalTopics = 0
-  let completedTopics = 0
+  let totalHours = 0
+  let completedHours = 0
 
   const updatedModules = (subject.modules || []).map((mod) => {
     const topics = mod.topics || []
-    const mTotal = topics.length
-    const mCompleted = topics.filter((t) => t.status === 'Completed').length
-    const mInProgress = topics.filter((t) => t.status === 'In Progress').length
+    
+    let mTotalHours = 0
+    let mCompletedHours = 0
 
-    totalTopics += mTotal
-    completedTopics += mCompleted
+    topics.forEach((t) => {
+      const tHours = t.estimatedStudyTime || t.duration || 1
+      mTotalHours += tHours
+      if (t.status === 'Completed') {
+        mCompletedHours += tHours
+      } else if (t.status === 'In Progress') {
+        mCompletedHours += tHours * 0.5
+      }
+    })
 
-    const progress = mTotal > 0 ? Math.round((mCompleted / mTotal) * 100) : 0
+    totalHours += mTotalHours
+    completedHours += mCompletedHours
+
+    const progress = mTotalHours > 0 ? Math.round((mCompletedHours / mTotalHours) * 100) : 0
+    
+    const mCompletedCount = topics.filter((t) => t.status === 'Completed').length
+    const mInProgressCount = topics.filter((t) => t.status === 'In Progress').length
+
     let status: Module['status'] = 'Not Started'
-    if (mCompleted === mTotal && mTotal > 0) {
+    if (mCompletedCount === topics.length && topics.length > 0) {
       status = 'Completed'
-    } else if (mCompleted > 0 || mInProgress > 0) {
+    } else if (mCompletedCount > 0 || mInProgressCount > 0) {
       status = 'In Progress'
     }
 
     return {
       ...mod,
+      hours: mTotalHours,
       progress,
       status,
     }
   })
 
-  const progress = totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0
+  const progress = totalHours > 0 ? Math.round((completedHours / totalHours) * 100) : 0
 
   return {
     ...subject,
@@ -94,7 +66,7 @@ export function recalculateSubject(subject: Subject): Subject {
 }
 
 // Initial Subjects compilation
-const initialSubjectsCompiled = defaultSubjectsRaw.map((sub) => recalculateSubject(sub))
+const initialSubjectsCompiled: Subject[] = []
 
 // Streak Calculator
 function calculateStreak(sessionDates: string[], todayStr: string): number {
@@ -141,6 +113,7 @@ interface AcademicEngineContextType {
   createSubject: (draft: Omit<Subject, 'id' | 'modules' | 'assignments' | 'resources' | 'notes' | 'progress'>) => void
   updateSubject: (subjectId: string, draft: Partial<Subject>) => void
   deleteSubject: (subjectId: string) => void
+  importCourseDirectly: (course: Subject) => void
   updateTopicStatus: (subjectId: string, moduleId: string, topicId: string, status: Topic['status']) => void
   addResource: (subjectId: string, title: string, type: SubjectResource['type'], url: string) => void
   deleteResource: (subjectId: string, resourceId: string) => void
@@ -241,6 +214,10 @@ export const AcademicEngineProvider: React.FC<{ children: React.ReactNode }> = (
 
   const deleteSubject = (subjectId: string) => {
     setSubjectsState((prev) => prev.filter((sub) => sub.id !== subjectId))
+  }
+
+  const importCourseDirectly = (course: Subject) => {
+    setSubjectsState((prev) => [...prev, recalculateSubject(course)])
   }
 
   const updateTopicStatus = (subjectId: string, moduleId: string, topicId: string, status: Topic['status']) => {
@@ -383,6 +360,7 @@ export const AcademicEngineProvider: React.FC<{ children: React.ReactNode }> = (
       createSubject,
       updateSubject,
       deleteSubject,
+      importCourseDirectly,
       updateTopicStatus,
       addResource,
       deleteResource,
@@ -494,6 +472,8 @@ export function useAnalyticsStore() {
     let totalTopics = 0
     let completedTopics = 0
     let inProgressTopics = 0
+    let semesterTotalHours = 0
+    let semesterCompletedHours = 0
 
     subjects.forEach((sub) => {
       sub.modules.forEach((mod) => {
@@ -501,11 +481,19 @@ export function useAnalyticsStore() {
           totalTopics++
           if (top.status === 'Completed') completedTopics++
           else if (top.status === 'In Progress') inProgressTopics++
+
+          const tHours = top.estimatedStudyTime || top.duration || 1
+          semesterTotalHours += tHours
+          if (top.status === 'Completed') {
+            semesterCompletedHours += tHours
+          } else if (top.status === 'In Progress') {
+            semesterCompletedHours += tHours * 0.5
+          }
         })
       })
     })
 
-    const semesterCompletion = totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0
+    const semesterCompletion = semesterTotalHours > 0 ? Math.round((semesterCompletedHours / semesterTotalHours) * 100) : 0
     const topicsRemaining = totalTopics - completedTopics
 
     // 2. Assignment calculations

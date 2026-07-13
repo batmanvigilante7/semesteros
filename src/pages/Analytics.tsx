@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { motion } from 'framer-motion'
 import {
   AreaChart,
   Area,
@@ -31,51 +32,10 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { useCourses } from '@/hooks/useCourses'
+import { useStudyStore, useAssignmentStore } from '@/stores/AcademicEngine'
 
 // Mock data structures
-const studyTimeData = [
-  { day: 'Mon', hours: 2.5 },
-  { day: 'Tue', hours: 3.8 },
-  { day: 'Wed', hours: 1.2 },
-  { day: 'Thu', hours: 4.5 },
-  { day: 'Fri', hours: 2.8 },
-  { day: 'Sat', hours: 5.0 },
-  { day: 'Sun', hours: 3.2 },
-]
-
-const subjectPerformanceData = [
-  { name: 'OOP', completion: 82, hours: 24 },
-  { name: 'Data Structures', completion: 65, hours: 32 },
-  { name: 'Computer Org', completion: 45, hours: 18 },
-  { name: 'Probability & Stats', completion: 70, hours: 20 },
-  { name: 'Environmental', completion: 90, hours: 8 },
-  { name: 'Additive Mfg', completion: 50, hours: 12 },
-]
-
-const productivityTrendData = [
-  { week: 'Wk 1', focus: 15 },
-  { week: 'Wk 2', focus: 18 },
-  { week: 'Wk 3', focus: 22 },
-  { week: 'Wk 4', focus: 19 },
-  { week: 'Wk 5', focus: 25 },
-]
-
-const assignmentStatusData = [
-  { name: 'Completed', value: 8, color: '#10B981' },
-  { name: 'Pending', value: 3, color: '#3B82F6' },
-  { name: 'Overdue', value: 1, color: '#EF4444' },
-]
-
-// Mock learning contribution values (GitHub style)
-const heatmapData = Array.from({ length: 98 }).map((_, idx) => {
-  const intensity = [0, 0, 1, 2, 0, 3, 1, 0, 2, 4, 1][idx % 11]
-  const date = new Date()
-  date.setDate(date.getDate() - (97 - idx))
-  return {
-    date: date.toISOString().split('T')[0],
-    intensity,
-  }
-})
+// Dynamic analytics arrays computed inside the component function
 
 interface BadgeItem {
   id: string
@@ -96,6 +56,97 @@ const initialBadges: BadgeItem[] = [
 
 export default function Analytics() {
   const { courses } = useCourses()
+  const { studySessions } = useStudyStore()
+  const { assignments } = useAssignmentStore()
+
+  // 1. Dynamic studyTimeData
+  const studyTimeData = useMemo(() => {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    const hoursByDay = [0, 0, 0, 0, 0, 0, 0]
+    
+    const oneWeekAgo = new Date()
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+    
+    studySessions.forEach((session) => {
+      const sessionDate = new Date(session.date)
+      if (sessionDate >= oneWeekAgo) {
+        const dayIdx = (sessionDate.getDay() + 6) % 7
+        hoursByDay[dayIdx] += Math.round((session.duration / 60) * 10) / 10
+      }
+    })
+
+    return days.map((day, idx) => ({
+      day,
+      hours: hoursByDay[idx] || 0.1
+    }))
+  }, [studySessions])
+
+  // 2. Dynamic subjectPerformanceData
+  const subjectPerformanceData = useMemo(() => {
+    return courses.map((course) => {
+      const courseSessions = studySessions.filter((s) => s.subject === course.id)
+      const courseHours = Math.round((courseSessions.reduce((sum, s) => sum + s.duration, 0) / 60) * 10) / 10
+      return {
+        name: course.code || course.name,
+        completion: course.progress,
+        hours: courseHours || 1
+      }
+    })
+  }, [courses, studySessions])
+
+  // 3. Dynamic productivityTrendData
+  const productivityTrendData = useMemo(() => {
+    return Array.from({ length: 5 }).map((_, idx) => {
+      const weekNum = 5 - idx
+      const start = new Date()
+      start.setDate(start.getDate() - weekNum * 7)
+      const end = new Date()
+      end.setDate(end.getDate() - (weekNum - 1) * 7)
+      
+      const count = studySessions.filter((s) => {
+        const d = new Date(s.date)
+        return d >= start && d <= end
+      }).length
+      
+      return {
+        week: `Wk ${6 - weekNum}`,
+        focus: count || 1
+      }
+    })
+  }, [studySessions])
+
+  // 4. Dynamic assignmentStatusData
+  const assignmentStatusData = useMemo(() => {
+    const completed = assignments.filter((a) => a.status === 'completed').length
+    const pending = assignments.filter((a) => a.status === 'pending' || a.status === 'in_progress').length
+    const overdue = assignments.filter((a) => a.status !== 'completed' && new Date(a.dueDate) < new Date()).length
+    return [
+      { name: 'Completed', value: completed, color: '#10B981' },
+      { name: 'Pending', value: pending, color: '#3B82F6' },
+      { name: 'Overdue', value: overdue, color: '#EF4444' },
+    ]
+  }, [assignments])
+
+  // 5. Dynamic heatmapData
+  const heatmapData = useMemo(() => {
+    const datesMap: Record<string, number> = {}
+    studySessions.forEach((session) => {
+      datesMap[session.date] = (datesMap[session.date] || 0) + 1
+    })
+
+    return Array.from({ length: 98 }).map((_, idx) => {
+      const date = new Date()
+      date.setDate(date.getDate() - (97 - idx))
+      const dateStr = date.toISOString().split('T')[0]
+      const count = datesMap[dateStr] || 0
+      const intensity = count > 3 ? 4 : count > 2 ? 3 : count > 1 ? 2 : count > 0 ? 1 : 0
+      return {
+        date: dateStr,
+        intensity,
+      }
+    })
+  }, [studySessions])
+
   const [filterMode, setFilterMode] = useState<'week' | 'month' | 'semester'>('week')
   const [badges] = useState<BadgeItem[]>(initialBadges)
 
@@ -112,7 +163,12 @@ export default function Analytics() {
   }
 
   return (
-    <div className="space-y-8 pb-12 text-left">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-8 pb-12 text-left"
+    >
       {/* 1. TOP HERO WIDGET */}
       <Card className="overflow-hidden border border-border-subtle bg-surface shadow-subtle p-6 md:p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -413,6 +469,6 @@ export default function Analytics() {
         </Card>
       </div>
 
-    </div>
+    </motion.div>
   )
 }

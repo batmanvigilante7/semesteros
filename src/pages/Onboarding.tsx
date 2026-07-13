@@ -54,9 +54,6 @@ export default function Onboarding() {
   const [duration, setDuration] = useState('3.0 hours')
   const [pomoLength, setPomoLength] = useState(25)
 
-  // AI model choice
-  const [aiPreference, setAiPreference] = useState<'local' | 'cloud' | 'none'>('local')
-
   const handleToggleCourse = (course: string) => {
     setSelectedCourses((prev) =>
       prev.includes(course) ? prev.filter((c) => c !== course) : [...prev, course]
@@ -70,7 +67,7 @@ export default function Onboarding() {
   }
 
   const handleNext = () => {
-    if (step < 7) {
+    if (step < 6) {
       setStep(step + 1)
     } else {
       // Save profile metadata
@@ -105,7 +102,7 @@ export default function Onboarding() {
           <span className="font-extrabold text-xs text-text-primary tracking-tight">Onboarding Stepper</span>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-text-secondary font-bold font-mono">
-          <span>Step {step} of 7</span>
+          <span>Step {step} of 6</span>
         </div>
       </header>
 
@@ -336,48 +333,8 @@ export default function Onboarding() {
                 </div>
               )}
 
-              {/* STEP 6: AI ENGINE SETTINGS */}
+              {/* STEP 6: SETUP COMPLETE */}
               {step === 6 && (
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <h3 className="text-sm font-bold text-text-primary flex items-center gap-1.5">
-                      🤖 Academic AI Setup
-                    </h3>
-                    <p className="text-[10px] text-text-secondary">Configure intelligence workspace engines. You can modify these settings later.</p>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    {[
-                      { id: 'local', title: 'Local AI', desc: 'Plug in Ollama / LM Studio models locally.', icon: '💻' },
-                      { id: 'cloud', title: 'Cloud AI', desc: 'Sync API keys for Gemini Pro / OpenAI GPT.', icon: '☁️' },
-                      { id: 'none', title: 'Disable AI', desc: 'Keep app offline without AI workspace features.', icon: '🔒' },
-                    ].map((provider) => {
-                      const selected = aiPreference === provider.id
-                      return (
-                        <button
-                          key={provider.id}
-                          type="button"
-                          onClick={() => setAiPreference(provider.id as any)}
-                          className={`p-4 rounded-2xl border transition-all text-left flex flex-col justify-between h-36 group cursor-pointer ${
-                            selected
-                              ? 'border-primary bg-primary/5 shadow-soft'
-                              : 'border-border-subtle bg-surface hover:border-border-medium'
-                          }`}
-                        >
-                          <span className="text-2xl">{provider.icon}</span>
-                          <div>
-                            <h4 className="text-xs font-bold text-text-primary">{provider.title}</h4>
-                            <p className="text-[9px] text-text-secondary mt-1 leading-normal">{provider.desc}</p>
-                          </div>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* STEP 7: SETUP COMPLETE */}
-              {step === 7 && (
                 <div className="space-y-4 text-center">
                   <div className="h-14 w-14 rounded-2xl bg-accent-teal/10 text-accent-teal flex items-center justify-center mx-auto shadow-subtle">
                     <CheckCircle2 className="h-7 w-7" />
@@ -404,7 +361,7 @@ export default function Onboarding() {
                 )}
 
                 <Button size="sm" onClick={handleNext} className="gap-1.5 rounded-xl text-xs py-2">
-                  {step === 7 ? 'Enter Workspace' : 'Next Step'} <ArrowRight className="h-3.5 w-3.5" />
+                  {step === 6 ? 'Enter Workspace' : 'Next Step'} <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               </div>
 
@@ -416,7 +373,7 @@ export default function Onboarding() {
       {/* Footer page indicators */}
       <footer className="max-w-3xl w-full mx-auto text-center py-2">
         <div className="flex justify-center gap-1.5">
-          {Array.from({ length: 7 }).map((_, idx) => (
+          {Array.from({ length: 6 }).map((_, idx) => (
             <span
               key={idx}
               className={`h-1.5 rounded-full transition-all duration-300 ${

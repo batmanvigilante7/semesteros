@@ -15,36 +15,43 @@ export default function NavigationItem({ path, label, icon: Icon, isCollapsed, o
       to={path}
       onClick={onClick}
       className={({ isActive }) =>
-        `relative flex items-center rounded-xl py-3 text-sm font-semibold transition-all duration-200 cursor-pointer ${
+        `relative flex items-center rounded-xl py-2.5 text-[13px] font-semibold transition-all duration-200 cursor-pointer ${
           isCollapsed ? 'justify-center px-0 h-11 w-11 mx-auto' : 'px-4 gap-3.5'
         } ${
           isActive
-            ? 'text-accent-blue bg-bg-secondary/80 shadow-subtle'
-            : 'text-text-secondary hover:text-text-primary hover:bg-bg-secondary/40'
+            ? 'text-primary font-bold'
+            : 'text-text-secondary hover:text-text-primary'
         }`
       }
       title={isCollapsed ? label : undefined}
     >
       {({ isActive }) => (
         <>
-          <Icon className={`h-5 w-5 shrink-0 transition-colors duration-200 ${isActive ? 'text-accent-blue' : 'text-text-secondary'}`} />
-          {!isCollapsed && (
-            <motion.span
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="truncate"
-            >
-              {label}
-            </motion.span>
-          )}
           {isActive && (
             <motion.div
-              layoutId="sidebar-active-indicator"
-              className="absolute left-0 top-3 bottom-3 w-1 rounded-r bg-accent-blue"
-              transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+              layoutId="sidebar-active-pill"
+              className="absolute inset-0 rounded-xl bg-primary/10 dark:bg-primary/15 z-0"
+              transition={{ type: 'spring', stiffness: 450, damping: 25 }}
             />
           )}
+
+          <motion.div
+            className="flex items-center gap-3.5 w-full relative z-10"
+            whileHover={isActive ? {} : { x: 3 }}
+            transition={{ type: 'spring', stiffness: 450, damping: 25 }}
+          >
+            <Icon className={`h-4.5 w-4.5 shrink-0 transition-colors duration-200 ${isActive ? 'text-primary' : 'text-text-secondary'}`} />
+            {!isCollapsed && (
+              <motion.span
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="truncate"
+              >
+                {label}
+              </motion.span>
+            )}
+          </motion.div>
         </>
       )}
     </NavLink>

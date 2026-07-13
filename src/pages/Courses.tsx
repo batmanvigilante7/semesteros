@@ -186,7 +186,7 @@ export default function Courses() {
       </div>
 
       {/* FILTER & SEARCH TOOLBAR */}
-      <Card className="rounded-[20px] border border-border-subtle bg-surface p-4 shadow-subtle space-y-4">
+      <div className="rounded-2xl border border-border-subtle bg-surface/75 backdrop-blur-md p-4 shadow-subtle space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           {/* Fuzzy Search bar */}
           <div className="relative flex-1 max-w-md">
@@ -235,7 +235,7 @@ export default function Courses() {
             </button>
           ))}
         </div>
-      </Card>
+      </div>
 
       {/* SUBJECTS CARDS GRID */}
       {filteredCourses.length > 0 ? (
@@ -247,7 +247,7 @@ export default function Courses() {
                 variants={cardVariants}
                 layout
                 whileHover={{ y: -4 }}
-                className="group flex flex-col justify-between overflow-hidden rounded-[24px] border border-border-subtle bg-surface p-5 shadow-subtle hover:border-border-medium hover:shadow-soft transition-all duration-200"
+                className="group flex flex-col justify-between overflow-hidden rounded-[24px] border border-border-subtle bg-surface/75 backdrop-blur-md p-5 shadow-subtle hover:border-border-medium hover:shadow-premium transition-all duration-300"
               >
                 <div className="space-y-4">
                   {/* Top line badges & Star */}

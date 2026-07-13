@@ -41,7 +41,7 @@ export default function Welcome() {
           </h1>
 
           <p className="text-xs sm:text-sm text-text-secondary leading-relaxed max-w-[45ch]">
-            Organize lectures, schedule study blocks, upload note libraries, and interact with syllabus AI tutors. Built for modern computer science undergrads.
+            Organize lectures, schedule study blocks, upload note libraries, and manage manual study logs and flashcards. Built for modern computer science undergrads.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
@@ -78,11 +78,11 @@ export default function Welcome() {
 
           <Card className="rounded-[24px] border border-border-subtle bg-surface p-5 shadow-subtle space-y-3">
             <div className="h-9 w-9 bg-accent-indigo/10 text-accent-indigo rounded-xl flex items-center justify-center">
-              💡
+              <GraduationCap className="h-4.5 w-4.5" />
             </div>
-            <h4 className="text-xs font-bold text-text-primary">Academic AI</h4>
+            <h4 className="text-xs font-bold text-text-primary">Study Workspace</h4>
             <p className="text-[10px] text-text-secondary leading-relaxed">
-              Generate interactive quizzes, revision flashcards, and step-by-step study plans.
+              Create manual flashcard decks, quick markdown notes, revision checklists, and log study sessions.
             </p>
           </Card>
 

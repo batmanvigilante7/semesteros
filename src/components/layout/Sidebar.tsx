@@ -1,9 +1,9 @@
 import { motion } from 'framer-motion'
+import { useEffect, useState } from 'react'
 import {
   LayoutDashboard,
   CheckSquare,
   BookOpen,
-  Calendar,
   BarChart2,
   Settings,
   GraduationCap,
@@ -12,10 +12,12 @@ import {
   ChevronRight,
   User,
   Folder,
-  Bot,
+  Calendar,
+  Upload,
 } from 'lucide-react'
 import NavigationItem from './NavigationItem'
 import UserMenu from './UserMenu'
+import { db } from '@/utils/db'
 
 interface SidebarProps {
   isOpen: boolean
@@ -28,15 +30,28 @@ const menuItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/courses', label: 'Courses', icon: BookOpen },
   { path: '/planner', label: 'Planner', icon: CheckSquare },
-  { path: '/resources', label: 'Resources', icon: Folder },
-  { path: '/ai', label: 'AI Assistant', icon: Bot },
-  { path: '/timeline', label: 'Timeline', icon: Calendar },
+  { path: '/resources', label: 'Knowledge Hub', icon: Folder },
+  { path: '/import', label: 'Import Lesson Plan', icon: Upload },
+  { path: '/study', label: 'Study Workspace', icon: GraduationCap },
+  { path: '/timeline', label: 'Semester Timeline', icon: Calendar },
   { path: '/analytics', label: 'Analytics', icon: BarChart2 },
   { path: '/profile', label: 'Profile', icon: User },
   { path: '/preferences', label: 'Settings', icon: Settings },
 ]
 
 export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: SidebarProps) {
+  const [storageBytes, setStorageBytes] = useState(0)
+
+  useEffect(() => {
+    db.getFiles().then((files) => {
+      let total = 0
+      files.forEach((f) => {
+        if (f.url) total += f.url.length * 0.75
+      })
+      setStorageBytes(total)
+    }).catch(() => {})
+  }, [isOpen])
+
   return (
     <>
       {/* Mobile Overlay */}
@@ -52,7 +67,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
         initial={false}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.2 }}
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border-subtle bg-bg-primary transition-all duration-300 lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border-subtle bg-bg-primary/85 backdrop-blur-lg transition-all duration-300 lg:static lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         } ${isCollapsed ? 'lg:w-[76px]' : 'lg:w-[280px] w-64'}`}
       >
@@ -111,6 +126,30 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
             {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </button>
         </div>
+
+        {/* Pinned Storage & Version Stats */}
+        {!isCollapsed && (
+          <div className="px-5 py-2.5 mx-4 mb-2 rounded-xl bg-bg-secondary/40 border border-border-subtle/50 text-[10px] text-left text-text-secondary select-none">
+            <div className="flex justify-between items-center">
+              <span>Local Storage Used</span>
+              <span className="font-bold text-text-primary">
+                {storageBytes > 0 
+                  ? `${(storageBytes / (1024 * 1024)).toFixed(2)} MB` 
+                  : '0 KB'}
+              </span>
+            </div>
+            <div className="w-full bg-border-subtle h-1 rounded-full mt-1.5 overflow-hidden">
+              <div 
+                className="bg-primary h-full transition-all duration-500" 
+                style={{ width: `${Math.min((storageBytes / (100 * 1024 * 1024)) * 100, 100)}%` }} 
+              />
+            </div>
+            <div className="flex justify-between items-center mt-2.5 text-[9px] text-text-tertiary">
+              <span>SemesterOS Version</span>
+              <span>v2.1.0-Notion</span>
+            </div>
+          </div>
+        )}
 
         {/* User Workspace Profile Footer */}
         <div className="border-t border-border-subtle p-4">

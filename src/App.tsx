@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { HashRouter, Routes, Route } from 'react-router-dom'
 import AppShell from '@/components/layout/AppShell'
 import Home from '@/pages/Home'
 import Planner from '@/pages/Planner'
@@ -15,10 +15,11 @@ import ErrorBoundary from '@/components/ErrorBoundary'
 
 const CourseDetail = lazy(() => import('@/pages/CourseDetail'))
 const Resources = lazy(() => import('@/pages/Resources'))
-const Ai = lazy(() => import('@/pages/Ai'))
+const StudyWorkspace = lazy(() => import('@/pages/StudyWorkspace'))
 const Welcome = lazy(() => import('@/pages/Welcome'))
 const Auth = lazy(() => import('@/pages/Auth'))
 const Onboarding = lazy(() => import('@/pages/Onboarding'))
+const ImportWorkspace = lazy(() => import('@/pages/ImportWorkspace'))
 const NotFound = lazy(() => import('@/pages/NotFound'))
 
 export default function App() {
@@ -26,7 +27,7 @@ export default function App() {
     <ErrorBoundary>
       <AcademicEngineProvider>
         <ToastProvider>
-          <BrowserRouter basename="/semesteros">
+          <HashRouter>
           <Routes>
             <Route
               path="welcome"
@@ -90,7 +91,7 @@ export default function App() {
                 }
               />
               <Route
-                path="ai"
+                path="study"
                 element={
                   <Suspense
                     fallback={
@@ -102,7 +103,7 @@ export default function App() {
                       </div>
                     }
                   >
-                    <Ai />
+                    <StudyWorkspace />
                   </Suspense>
                 }
               />
@@ -133,6 +134,7 @@ export default function App() {
               <Route path="preferences" element={<Preferences />} />
               <Route path="showcase" element={<Showcase />} />
               <Route path="profile" element={<Profile />} />
+              <Route path="import" element={<ImportWorkspace />} />
             </Route>
             <Route
               path="*"
@@ -143,7 +145,7 @@ export default function App() {
               }
             />
           </Routes>
-        </BrowserRouter>
+        </HashRouter>
       </ToastProvider>
     </AcademicEngineProvider>
   </ErrorBoundary>

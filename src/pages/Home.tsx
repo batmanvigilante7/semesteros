@@ -64,6 +64,26 @@ export default function Home() {
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
     .slice(0, 3)
 
+  // Dynamic study steps recommendation
+  const nextStudySteps = courses
+    .flatMap((c) => 
+      (c.modules || []).flatMap((m) => 
+        (m.topics || []).map((t) => ({ ...t, courseName: c.name, courseColor: c.color, courseId: c.id }))
+      )
+    )
+    .filter((t) => t.status !== 'Completed')
+    .slice(0, 3)
+
+  // Dynamic lagging subjects (progress < 70)
+  const weakSubjects = courses.filter((c) => c.progress < 70)
+
+  // Dynamic productivity calculations
+  const totalTopics = courses.reduce((sum, c) => sum + (c.modules || []).reduce((msum, m) => msum + (m.topics?.length || 0), 0), 0)
+  const completedTopics = courses.reduce((sum, c) => sum + (c.modules || []).reduce((msum, m) => msum + (m.topics?.filter(t => t.status === 'Completed').length || 0), 0), 0)
+  const inProgressTopics = courses.reduce((sum, c) => sum + (c.modules || []).reduce((msum, m) => msum + (m.topics?.filter(t => t.status === 'In Progress').length || 0), 0), 0)
+  const completionRatio = totalTopics > 0 ? (completedTopics + inProgressTopics * 0.5) / totalTopics : 0
+  const productivityScore = Math.max(10, Math.min(100, Math.round(completionRatio * 80 + (completedAssignmentsCount / Math.max(1, assignments.length)) * 20)))
+
   // Dynamic greeting
   const getGreeting = () => {
     const hours = new Date().getHours()
@@ -184,7 +204,7 @@ export default function Home() {
         {/* LEFT COLUMN: COURSE PROGRESS & DEADLINES */}
         <div className="space-y-6">
           {/* COURSE PROGRESS SECTION */}
-          <motion.div variants={itemVariants} className="space-y-4">
+          <motion.div variants={containerVariants} className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-text-primary flex items-center gap-2">
                 <BookOpen className="h-4 w-4 text-primary" />
@@ -196,83 +216,105 @@ export default function Home() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              {courses.map((course) => {
-                // Calculate topic progress count
-                let totalTopics = 0
-                let doneTopics = 0
-                course.modules.forEach((m) => {
-                  m.topics.forEach((t) => {
-                    totalTopics++
-                    if (t.status === 'Completed') doneTopics++
+              {courses.length === 0 ? (
+                <div className="col-span-2 rounded-[24px] border border-dashed border-border-medium bg-bg-secondary/20 p-8 text-center flex flex-col items-center justify-center space-y-4">
+                  <BookOpen className="h-8 w-8 text-text-tertiary" />
+                  <div>
+                    <h4 className="text-sm font-bold text-text-primary">No courses imported yet</h4>
+                    <p className="text-xs text-text-secondary mt-1 max-w-[40ch] mx-auto">Import your university lesson plan to bootstrap your academic command center.</p>
+                  </div>
+                  <Button onClick={() => navigate('/import')} size="sm">
+                    Import Lesson Plan
+                  </Button>
+                </div>
+              ) : (
+                courses.map((course) => {
+                  let totalTopics = 0
+                  let doneTopics = 0
+                  course.modules.forEach((m) => {
+                    m.topics.forEach((t) => {
+                      totalTopics++
+                      if (t.status === 'Completed') doneTopics++
+                    })
                   })
-                })
 
-                return (
-                  <Card
-                    key={course.id}
-                    className="group rounded-2xl border border-border-subtle bg-surface p-5 shadow-subtle flex flex-col justify-between space-y-4 hover:border-border-medium hover:shadow-soft transition-all duration-200"
-                  >
-                    <div className="space-y-2.5">
-                      <div className="flex items-center gap-2">
-                        <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: course.color }} />
-                        <span className="text-[9px] font-extrabold uppercase tracking-wider text-text-secondary">
-                          {course.code}
-                        </span>
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-text-primary group-hover:text-primary transition-colors line-clamp-1">
-                          {course.name}
-                        </h4>
-                        <p className="text-[10px] text-text-secondary mt-0.5">Faculty: {course.faculty}</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-[10px] text-text-secondary">
-                        <span>Syllabus Progress</span>
-                        <span className="font-bold text-text-primary">{course.progress}%</span>
-                      </div>
-                      <div className="h-1 bg-bg-secondary rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full"
-                          style={{ width: `${course.progress}%`, backgroundColor: course.color }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-[9px] text-text-tertiary font-medium">
-                        <span>{doneTopics} of {totalTopics} topics</span>
-                        <span>Attendance: {course.attendance}%</span>
-                      </div>
-                    </div>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/courses/${course.id}`)}
-                      className="w-full justify-between group-hover:border-primary/20 hover:bg-bg-secondary text-[11px] font-semibold"
+                  return (
+                    <motion.div 
+                      key={course.id} 
+                      variants={itemVariants}
+                      whileHover={{ y: -3 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                     >
-                      Continue Learning
-                      <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-                    </Button>
-                  </Card>
-                )
-              })}
+                      <Card
+                        className="group rounded-2xl border border-border-subtle bg-surface/75 p-5 shadow-subtle flex flex-col justify-between space-y-4 hover:border-border-medium hover:shadow-premium transition-all duration-300 animate-fade-in"
+                      >
+                        <div className="space-y-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: course.color }} />
+                            <span className="text-[9px] font-extrabold uppercase tracking-wider text-text-secondary">
+                              {course.code}
+                            </span>
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold text-text-primary group-hover:text-primary transition-colors line-clamp-1">
+                              {course.name}
+                            </h4>
+                            <p className="text-[10px] text-text-secondary mt-0.5">Faculty: {course.faculty}</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-[10px] text-text-secondary">
+                            <span>Syllabus Progress</span>
+                            <span className="font-bold text-text-primary">{course.progress}%</span>
+                          </div>
+                          <div className="h-1 bg-bg-secondary rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full"
+                              style={{ width: `${course.progress}%`, backgroundColor: course.color }}
+                            />
+                          </div>
+                          <div className="flex justify-between text-[9px] text-text-tertiary font-medium">
+                            <span>{doneTopics} of {totalTopics} topics</span>
+                            <span>Attendance: {course.attendance}%</span>
+                          </div>
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/courses/${course.id}`)}
+                          className="w-full justify-between group-hover:border-primary/20 hover:bg-bg-secondary text-[11px] font-semibold"
+                        >
+                          Continue Learning
+                          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                        </Button>
+                      </Card>
+                    </motion.div>
+                  )
+                })
+              )}
             </div>
           </motion.div>
 
           {/* UPCOMING DEADLINES SECTION */}
-          <motion.div variants={itemVariants} className="space-y-4">
+          <motion.div variants={containerVariants} className="space-y-4">
             <h3 className="text-sm font-bold text-text-primary flex items-center gap-2">
               <CalendarDays className="h-4 w-4 text-accent-rose" />
               Upcoming Planner Deadlines
             </h3>
 
-            <Card className="rounded-[24px] border-border-subtle bg-surface p-5 shadow-subtle space-y-4">
+            <Card className="rounded-[24px] border-border-subtle bg-surface/75 p-5 shadow-subtle space-y-4">
               {upcomingDeadlines.length > 0 ? (
                 <div className="divide-y divide-border-subtle">
                   {upcomingDeadlines.map((deadline) => {
                     const matchedCourse = courses.find((c) => c.id === deadline.subjectId)
                     return (
-                      <div key={deadline.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                      <motion.div 
+                        key={deadline.id} 
+                        variants={itemVariants}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                      >
                         <div className="flex items-start gap-3">
                           <span
                             className="h-3 w-3 rounded-full mt-1.5 shrink-0"
@@ -301,7 +343,7 @@ export default function Home() {
                             {new Date(deadline.dueDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
                           </span>
                         </div>
-                      </div>
+                      </motion.div>
                     )
                   })}
                 </div>
@@ -314,58 +356,64 @@ export default function Home() {
           </motion.div>
         </div>
 
-        {/* RIGHT COLUMN: SCHEDULE, PRODUCTIVITY & RECENT ACTIVITIES */}
+        {/* RIGHT COLUMN: RECOMMENDED NEXT, FOCUS, AND LAGGING SUBJECTS */}
         <div className="space-y-6">
-          {/* TODAY'S CLASS SCHEDULE */}
-          <motion.div variants={itemVariants} className="space-y-4">
+          {/* STUDY RECOMMENDATIONS */}
+          <motion.div variants={containerVariants} className="space-y-4">
             <h3 className="text-sm font-bold text-text-primary flex items-center gap-2">
               <Clock className="h-4 w-4 text-accent-indigo" />
-              Today's Lectures
+              Recommended Study Steps
             </h3>
 
-            <Card className="rounded-[24px] border-border-subtle bg-surface p-5 shadow-subtle space-y-4">
-              <div className="relative pl-5 border-l border-border-medium space-y-5">
-                <div className="relative">
-                  <div className="absolute -left-[27px] top-1.5 h-2.5 w-2.5 rounded-full bg-accent-blue border-2 border-white dark:border-bg-primary" />
-                  <div className="flex justify-between items-start text-xs">
-                    <div>
-                      <h4 className="font-bold text-text-primary">Object Oriented Programming</h4>
-                      <p className="text-[10px] text-text-secondary mt-0.5">Lecture Room 402 • Theory Session</p>
-                    </div>
-                    <span className="text-[10px] font-semibold text-accent-blue bg-accent-blue/10 px-1.5 py-0.5 rounded-lg shrink-0">
-                      09:00 AM
-                    </span>
-                  </div>
+            <Card className="rounded-[24px] border-border-subtle bg-surface/75 p-5 shadow-subtle space-y-4">
+              {nextStudySteps.length > 0 ? (
+                <div className="relative pl-5 border-l border-border-medium space-y-5">
+                  {nextStudySteps.map((step, idx) => (
+                    <motion.div key={idx} variants={itemVariants} className="relative cursor-pointer" onClick={() => navigate(`/courses/${step.courseId}`)}>
+                      <div className="absolute -left-[27px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-bg-primary" style={{ backgroundColor: step.courseColor }} />
+                      <div className="flex justify-between items-start text-xs">
+                        <div>
+                          <h4 className="font-bold text-text-primary hover:text-primary transition-colors line-clamp-1">{step.title}</h4>
+                          <p className="text-[10px] text-text-secondary mt-0.5">{step.courseName} • Est: {step.estimatedStudyTime || step.duration || 1}h</p>
+                        </div>
+                        <span className="text-[9px] font-semibold text-text-secondary bg-bg-secondary px-1.5 py-0.5 rounded-lg shrink-0">
+                          {step.status}
+                        </span>
+                      </div>
+                    </motion.div>
+                  ))}
                 </div>
-
-                <div className="relative">
-                  <div className="absolute -left-[27px] top-1.5 h-2.5 w-2.5 rounded-full bg-accent-indigo border-2 border-white dark:border-bg-primary" />
-                  <div className="flex justify-between items-start text-xs">
-                    <div>
-                      <h4 className="font-bold text-text-primary">Data Structures Lab</h4>
-                      <p className="text-[10px] text-text-secondary mt-0.5">Systems Lab 3 • Practical Session</p>
-                    </div>
-                    <span className="text-[10px] font-semibold text-text-secondary bg-bg-secondary px-1.5 py-0.5 rounded-lg shrink-0">
-                      11:30 AM
-                    </span>
-                  </div>
+              ) : (
+                <div className="py-6 text-center text-xs text-text-secondary">
+                  {courses.length === 0 ? "Import a lesson plan to view recommended next study steps." : "Excellent! All syllabus topics are completed. 🎉"}
                 </div>
-
-                <div className="relative">
-                  <div className="absolute -left-[27px] top-1.5 h-2.5 w-2.5 rounded-full bg-accent-indigo border-2 border-white dark:border-bg-primary" />
-                  <div className="flex justify-between items-start text-xs">
-                    <div>
-                      <h4 className="font-bold text-text-primary">Computer Organization</h4>
-                      <p className="text-[10px] text-text-secondary mt-0.5">Lecture Room 201 • Theory Session</p>
-                    </div>
-                    <span className="text-[10px] font-semibold text-text-secondary bg-bg-secondary px-1.5 py-0.5 rounded-lg shrink-0">
-                      02:00 PM
-                    </span>
-                  </div>
-                </div>
-              </div>
+              )}
             </Card>
           </motion.div>
+
+          {/* WEAK SUBJECTS / LAGGING */}
+          {courses.length > 0 && weakSubjects.length > 0 && (
+            <motion.div variants={containerVariants} className="space-y-4">
+              <h3 className="text-sm font-bold text-text-primary flex items-center gap-2">
+                <Flame className="h-4 w-4 text-accent-rose" />
+                Needs Attention (Lagging)
+              </h3>
+
+              <Card className="rounded-[24px] border-border-subtle bg-surface/75 p-5 shadow-subtle space-y-3">
+                {weakSubjects.slice(0, 3).map((sub) => (
+                  <div key={sub.id} className="flex justify-between items-center text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: sub.color }} />
+                      <span className="font-bold text-text-primary truncate max-w-[150px]">{sub.name}</span>
+                    </div>
+                    <span className="text-[10px] font-extrabold text-accent-rose bg-accent-rose/10 px-2 py-0.5 rounded border border-accent-rose/10">
+                      {sub.progress}% Complete
+                    </span>
+                  </div>
+                ))}
+              </Card>
+            </motion.div>
+          )}
 
           {/* PRODUCTIVITY & HABIT PANEL */}
           <motion.div variants={itemVariants} className="space-y-4">
@@ -379,9 +427,9 @@ export default function Home() {
                 <div className="space-y-1">
                   <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider">Productivity Score</span>
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-2xl font-extrabold text-text-primary font-mono">94</span>
+                    <span className="text-2xl font-extrabold text-text-primary font-mono">{productivityScore}</span>
                     <span className="text-xs font-semibold text-accent-teal flex items-center gap-0.5">
-                      <TrendingUp className="h-3.5 w-3.5" /> +2%
+                      <TrendingUp className="h-3.5 w-3.5" /> On Track
                     </span>
                   </div>
                   <p className="text-[10px] text-text-secondary">Based on lesson completions & streaks.</p>
@@ -404,10 +452,10 @@ export default function Home() {
                       strokeWidth="4"
                       fill="transparent"
                       strokeDasharray={2 * Math.PI * 26}
-                      strokeDashoffset={2 * Math.PI * 26 * (1 - 0.94)}
+                      strokeDashoffset={2 * Math.PI * 26 * (1 - productivityScore / 100)}
                     />
                   </svg>
-                  <span className="text-xs font-extrabold text-primary">94%</span>
+                  <span className="text-xs font-extrabold text-primary">{productivityScore}%</span>
                 </div>
               </div>
 

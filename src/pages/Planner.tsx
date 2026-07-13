@@ -21,13 +21,19 @@ import {
   Flame,
   Calendar,
   ChevronDown,
+  List,
+  Kanban,
+  ArrowLeft,
+  ArrowRight,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { AnimatedButton, AnimatedCard } from '@/components/ui/MotionSystem'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { useCourses } from '@/hooks/useCourses'
 import { createEmptyTaskDraft, usePlanner } from '@/hooks/usePlanner'
 import type { Course } from '@/models'
+import { PageHeader } from '@/components/ui/PageHeader'
 import type {
   Task,
   TaskDraft,
@@ -102,6 +108,9 @@ export default function Planner() {
   // Planner navigation tabs
   const [activeTab, setActiveTab] = useState<'tasks' | 'calendar' | 'habits' | 'pomodoro'>('tasks')
 
+  // Database View State
+  const [dbView, setDbView] = useState<'list' | 'board' | 'calendar' | 'timeline'>('list')
+
   // Search & Filter states
   const [searchQuery, setSearchQuery] = useState('')
   const [filterMode, setFilterMode] = useState<TaskFilter>('all')
@@ -155,7 +164,7 @@ export default function Planner() {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
-  };
+  }
 
   // Toggle habit check for dates
   const handleToggleHabit = (habitId: string, dateStr: string) => {
@@ -182,6 +191,16 @@ export default function Planner() {
   const handleToggleTaskStatus = (taskId: string, currentStatus: TaskStatus) => {
     const nextStatus = currentStatus === 'completed' ? 'pending' : 'completed'
     setTaskStatus(taskId, nextStatus)
+  }
+
+  // Promote / Demote status on Kanban Board
+  const handleMoveStatus = (task: Task, direction: 'forward' | 'backward') => {
+    const statusOrder: TaskStatus[] = ['pending', 'in_progress', 'completed']
+    const currentIndex = statusOrder.indexOf(task.status)
+    let nextIndex = currentIndex + (direction === 'forward' ? 1 : -1)
+    if (nextIndex >= 0 && nextIndex < statusOrder.length) {
+      setTaskStatus(task.id, statusOrder[nextIndex])
+    }
   }
 
   // Task filtering
@@ -235,6 +254,16 @@ export default function Planner() {
     setModalOpen(true)
   }
 
+  useEffect(() => {
+    const handleGlobalCreateTask = () => {
+      openCreateModal()
+    }
+    window.addEventListener('open-create-task', handleGlobalCreateTask)
+    return () => {
+      window.removeEventListener('open-create-task', handleGlobalCreateTask)
+    }
+  }, [])
+
   const handleFormSubmit = (e: FormEvent) => {
     e.preventDefault()
     if (!draft.title.trim()) return
@@ -254,9 +283,24 @@ export default function Planner() {
   }
 
   return (
-    <div className="space-y-8 pb-12 text-left">
+    <div className="space-y-8 pb-12 text-left select-none">
+      {/* Page Header Primitive */}
+      <PageHeader
+        title="Planner & Schedule"
+        description="Track your daily schedule, habits, and syllabus checkpoints."
+        breadcrumbs={[
+          { label: "Academic OS" },
+          { label: "Planner" }
+        ]}
+        primaryAction={{
+          label: "New Task",
+          onClick: openCreateModal,
+          icon: Plus
+        }}
+      />
+
       {/* 1. TOP FOCUS HERO CARD */}
-      <Card className="overflow-hidden border border-border-subtle bg-surface shadow-subtle p-6 md:p-8">
+      <AnimatedCard className="overflow-hidden border border-border-subtle bg-surface shadow-subtle p-6 md:p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-xl space-y-4">
             <div className="inline-flex items-center gap-2 rounded-full border border-border-subtle bg-bg-secondary px-3 py-1 text-[10px] font-bold text-primary shadow-subtle uppercase tracking-wider">
@@ -284,7 +328,7 @@ export default function Planner() {
             </div>
           </div>
         </div>
-      </Card>
+      </AnimatedCard>
 
       {/* 2. PLANNER MODULE TABS */}
       <div className="flex border-b border-border-subtle gap-4">
@@ -339,7 +383,7 @@ export default function Planner() {
                 <CheckCircle2 className="h-4.5 w-4.5" />
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary">Completed</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary font-semibold">Completed</p>
                 <h4 className="text-xl font-extrabold text-text-primary mt-0.5 font-mono">{stats.completed}</h4>
               </div>
             </Card>
@@ -349,7 +393,7 @@ export default function Planner() {
                 <AlertTriangle className="h-4.5 w-4.5" />
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary">Overdue</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary font-semibold">Overdue</p>
                 <h4 className="text-xl font-extrabold text-text-primary mt-0.5 font-mono">{stats.overdue}</h4>
               </div>
             </Card>
@@ -357,19 +401,61 @@ export default function Planner() {
 
           {/* SEARCH & FILTERS BAR */}
           <Card className="rounded-[20px] border border-border-subtle bg-surface p-4 shadow-subtle space-y-4">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
-                <input
-                  type="text"
-                  placeholder="Search tasks, courses..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full rounded-xl border border-border-subtle bg-bg-secondary/40 py-2 pl-10 pr-4 text-xs text-text-primary placeholder:text-text-muted focus:border-primary focus:outline-none transition-colors"
-                />
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
+                  <input
+                    type="text"
+                    placeholder="Search tasks, courses..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full rounded-xl border border-border-subtle bg-bg-secondary/40 py-2 pl-10 pr-4 text-xs text-text-primary placeholder:text-text-muted focus:border-primary focus:outline-none transition-colors"
+                  />
+                </div>
+
+                {/* Database Views Switcher - Notion style */}
+                <div className="flex rounded-xl border border-border-subtle bg-bg-primary p-0.5 shadow-subtle self-start sm:self-auto select-none">
+                  <button
+                    onClick={() => setDbView('list')}
+                    className={cn(
+                      'px-3 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1.5 cursor-pointer transition-all',
+                      dbView === 'list' ? 'bg-surface text-primary shadow-subtle' : 'text-text-secondary hover:text-text-primary'
+                    )}
+                  >
+                    <List className="h-3.5 w-3.5" /> List
+                  </button>
+                  <button
+                    onClick={() => setDbView('board')}
+                    className={cn(
+                      'px-3 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1.5 cursor-pointer transition-all',
+                      dbView === 'board' ? 'bg-surface text-primary shadow-subtle' : 'text-text-secondary hover:text-text-primary'
+                    )}
+                  >
+                    <Kanban className="h-3.5 w-3.5" /> Board
+                  </button>
+                  <button
+                    onClick={() => setDbView('calendar')}
+                    className={cn(
+                      'px-3 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1.5 cursor-pointer transition-all',
+                      dbView === 'calendar' ? 'bg-surface text-primary shadow-subtle' : 'text-text-secondary hover:text-text-primary'
+                    )}
+                  >
+                    <Calendar className="h-3.5 w-3.5" /> Calendar
+                  </button>
+                  <button
+                    onClick={() => setDbView('timeline')}
+                    className={cn(
+                      'px-3 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1.5 cursor-pointer transition-all',
+                      dbView === 'timeline' ? 'bg-surface text-primary shadow-subtle' : 'text-text-secondary hover:text-text-primary'
+                    )}
+                  >
+                    <Clock className="h-3.5 w-3.5" /> Timeline
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 self-end lg:self-auto">
                 <div className="flex items-center gap-1.5 text-xs text-text-secondary">
                   <ArrowDownUp className="h-3.5 w-3.5" />
                   <span className="font-semibold">Sort:</span>
@@ -388,7 +474,7 @@ export default function Planner() {
                   </select>
                   <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-secondary pointer-events-none" />
                 </div>
-                <Button onClick={openCreateModal} className="gap-1.5 rounded-xl text-xs">
+                <Button onClick={openCreateModal} className="gap-1.5 rounded-xl text-xs bg-primary text-white">
                   <Plus className="h-4 w-4" /> Add Task
                 </Button>
               </div>
@@ -412,106 +498,362 @@ export default function Planner() {
             </div>
           </Card>
 
-          {/* TASKS LIST */}
-          <div className="space-y-3">
-            <AnimatePresence mode="popLayout">
-              {filteredTasks.map((task) => {
-                const matchedCourse = courses.find((c: Course) => c.name === task.subject)
-                const color = matchedCourse?.color || '#2563EB'
-                return (
-                  <motion.article
-                    key={task.id}
-                    variants={cardVariants}
-                    layout
-                    className="group rounded-2xl border border-border-subtle bg-surface p-4 shadow-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-border-medium hover:shadow-soft transition-all duration-200"
-                  >
-                    <div className="flex items-start gap-3.5 min-w-0">
-                      <button
-                        onClick={() => handleToggleTaskStatus(task.id, task.status)}
-                        className={cn(
-                          'h-5 w-5 rounded-lg border flex items-center justify-center shrink-0 mt-1 transition-all cursor-pointer',
-                          task.status === 'completed'
-                            ? 'bg-accent-teal border-accent-teal text-white shadow-soft'
-                            : 'border-border-medium hover:border-text-secondary bg-bg-primary'
-                        )}
+          {/* DYNAMIC DATABASE VIEWS CONTAINER */}
+          <div>
+            
+            {/* VIEW 1: LIST VIEW */}
+            {dbView === 'list' && (
+              <div className="space-y-3">
+                <AnimatePresence mode="popLayout">
+                  {filteredTasks.map((task) => {
+                    const matchedCourse = courses.find((c: Course) => c.name === task.subject)
+                    const color = matchedCourse?.color || '#2563EB'
+                    return (
+                      <motion.article
+                        key={task.id}
+                        variants={cardVariants}
+                        layout
+                        className="group rounded-2xl border border-border-subtle bg-surface p-4 shadow-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-border-medium hover:shadow-soft transition-all duration-200"
                       >
-                        {task.status === 'completed' && <Check className="h-3.5 w-3.5 stroke-[3]" />}
-                      </button>
-
-                      <div className="min-w-0 text-left">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h4
+                        <div className="flex items-start gap-3.5 min-w-0">
+                          <button
+                            onClick={() => handleToggleTaskStatus(task.id, task.status)}
                             className={cn(
-                              'text-xs font-bold text-text-primary',
-                              task.status === 'completed' && 'line-through text-text-tertiary font-medium'
+                              'h-5 w-5 rounded-lg border flex items-center justify-center shrink-0 mt-1 transition-all cursor-pointer',
+                              task.status === 'completed'
+                                ? 'bg-accent-teal border-accent-teal text-white shadow-soft'
+                                : 'border-border-medium hover:border-text-secondary bg-bg-primary'
                             )}
                           >
-                            {task.title}
-                          </h4>
-                          {matchedCourse?.code && (
-                            <span
-                              className="rounded-lg px-2 py-0.5 text-[9px] font-extrabold text-white"
-                              style={{ backgroundColor: color }}
+                            {task.status === 'completed' && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                          </button>
+
+                          <div className="min-w-0 text-left">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4
+                                className={cn(
+                                  'text-xs font-bold text-text-primary',
+                                  task.status === 'completed' && 'line-through text-text-tertiary font-medium'
+                                )}
+                              >
+                                {task.title}
+                              </h4>
+                              {matchedCourse?.code && (
+                                <span
+                                  className="rounded-lg px-2 py-0.5 text-[9px] font-extrabold text-white"
+                                  style={{ backgroundColor: color }}
+                                >
+                                  {matchedCourse.code}
+                                </span>
+                              )}
+                              <PriorityBadge priority={task.priority} />
+                            </div>
+                            {task.description && (
+                              <p className="text-[10px] text-text-secondary mt-1 leading-relaxed line-clamp-1">
+                                {task.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between sm:justify-end gap-4 border-t border-border-subtle/50 pt-3 sm:border-0 sm:pt-0 shrink-0">
+                          <div className="flex items-center gap-3 text-[10px] font-semibold text-text-secondary">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3.5 w-3.5 text-text-tertiary" /> {task.estimatedHours} hrs
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <CalendarDays className="h-3.5 w-3.5 text-text-tertiary" /> {formatTaskDate(task.dueDate)}
+                            </span>
+                            {task.status !== 'completed' && isOverdue(task) && (
+                              <span className="text-accent-rose font-bold uppercase tracking-wider flex items-center gap-0.5">
+                                <AlertTriangle className="h-3 w-3" /> Overdue
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => openEditModal(task)}
+                              className="rounded-lg p-1.5 text-text-secondary hover:bg-bg-secondary hover:text-text-primary transition-colors cursor-pointer"
                             >
-                              {matchedCourse.code}
+                              <Edit3 className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(task.id)}
+                              className="rounded-lg p-1.5 text-accent-rose hover:bg-accent-rose/10 transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </motion.article>
+                    )
+                  })}
+                </AnimatePresence>
+
+                {filteredTasks.length === 0 && (
+                  <Card className="rounded-[24px] border border-dashed border-border-medium p-12 text-center max-w-sm mx-auto">
+                    <FileText className="h-12 w-12 text-text-tertiary mx-auto mb-4" />
+                    <h4 className="text-sm font-bold text-text-primary">No Tasks Found</h4>
+                    <p className="text-[10px] text-text-secondary mt-1">Add a new task or adjust filters to see items.</p>
+                    <Button onClick={openCreateModal} className="mt-4 text-xs font-semibold rounded-xl">
+                      Add New Task
+                    </Button>
+                  </Card>
+                )}
+              </div>
+            )}
+
+            {/* VIEW 2: BOARD VIEW (KANBAN) */}
+            {dbView === 'board' && (
+              <div className="grid gap-4 md:grid-cols-3">
+                {([
+                  { key: 'pending', label: 'To Do', border: 'border-t-accent-rose/70' },
+                  { key: 'in_progress', label: 'In Progress', border: 'border-t-accent-amber/70' },
+                  { key: 'completed', label: 'Completed', border: 'border-t-accent-teal/70' },
+                ] as const).map((col) => {
+                  const colTasks = filteredTasks.filter((t) => t.status === col.key)
+                  return (
+                    <Card
+                      key={col.key}
+                      className={cn(
+                        'p-4 bg-bg-secondary/20 border-border-subtle border-t-4 flex flex-col space-y-4 shadow-subtle min-h-[450px] transition-colors duration-200',
+                        col.border
+                      )}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        const taskId = e.dataTransfer.getData('taskId')
+                        if (taskId) {
+                          setTaskStatus(taskId, col.key)
+                        }
+                      }}
+                    >
+                      <div className="flex justify-between items-center border-b border-border-subtle/50 pb-2">
+                        <span className="text-xs font-bold text-text-primary uppercase tracking-wider">{col.label}</span>
+                        <Badge variant="indigo" className="font-mono font-extrabold">{colTasks.length}</Badge>
+                      </div>
+
+                      <div className="flex-1 space-y-3 overflow-y-auto max-h-[500px] pr-1">
+                        {colTasks.map((task) => {
+                          const matchedCourse = courses.find((c: Course) => c.name === task.subject)
+                          const color = matchedCourse?.color || '#2563EB'
+                          return (
+                            <Card
+                              key={task.id}
+                              className="p-3 bg-surface border border-border-subtle hover:border-border-medium hover:shadow-soft transition-all duration-200 space-y-3 text-left cursor-grab active:cursor-grabbing"
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData('taskId', task.id)
+                              }}
+                            >
+                              <div className="space-y-1.5">
+                                <div className="flex justify-between items-start gap-2">
+                                  <h4 className="text-xs font-bold text-text-primary leading-snug line-clamp-2">
+                                    {task.title}
+                                  </h4>
+                                  <button
+                                    onClick={() => handleToggleTaskStatus(task.id, task.status)}
+                                    className={cn(
+                                      'h-4.5 w-4.5 rounded border flex items-center justify-center shrink-0 mt-0.5 transition-all cursor-pointer',
+                                      task.status === 'completed'
+                                        ? 'bg-accent-teal border-accent-teal text-white'
+                                        : 'border-border-medium'
+                                    )}
+                                  >
+                                    {task.status === 'completed' && <Check className="h-3 w-3 stroke-[3]" />}
+                                  </button>
+                                </div>
+                                {matchedCourse?.code && (
+                                  <span
+                                    className="inline-block rounded-lg px-2 py-0.5 text-[8.5px] font-extrabold text-white"
+                                    style={{ backgroundColor: color }}
+                                  >
+                                    {matchedCourse.code}
+                                  </span>
+                                )}
+                                <PriorityBadge priority={task.priority} />
+                                {task.description && (
+                                  <p className="text-[10px] text-text-secondary leading-normal line-clamp-2">
+                                    {task.description}
+                                  </p>
+                                )}
+                              </div>
+
+                              <div className="flex items-center justify-between pt-2.5 border-t border-border-subtle/50 text-[9px] font-bold text-text-secondary">
+                                <span className="flex items-center gap-0.5"><Clock className="h-3 w-3" /> {task.estimatedHours}h</span>
+                                <span>{new Date(task.dueDate).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+                              </div>
+
+                              {/* Kanban quick status movers */}
+                              <div className="flex justify-end gap-1 pt-1.5 border-t border-border-subtle/40">
+                                <button
+                                  onClick={() => openEditModal(task)}
+                                  className="p-1 rounded text-text-secondary hover:bg-bg-secondary hover:text-text-primary mr-auto"
+                                >
+                                  <Edit3 className="h-3 w-3" />
+                                </button>
+                                <button
+                                  onClick={() => handleMoveStatus(task, 'backward')}
+                                  disabled={task.status === 'pending'}
+                                  className="p-1 rounded border border-border-subtle/70 bg-bg-secondary/40 text-text-secondary hover:bg-bg-secondary disabled:opacity-30 cursor-pointer"
+                                  title="Move Left"
+                                >
+                                  <ArrowLeft className="h-3 w-3" />
+                                </button>
+                                <button
+                                  onClick={() => handleMoveStatus(task, 'forward')}
+                                  disabled={task.status === 'completed'}
+                                  className="p-1 rounded border border-border-subtle/70 bg-bg-secondary/40 text-text-secondary hover:bg-bg-secondary disabled:opacity-30 cursor-pointer"
+                                  title="Move Right"
+                                >
+                                  <ArrowRight className="h-3 w-3" />
+                                </button>
+                              </div>
+                            </Card>
+                          )
+                        })}
+
+                        {colTasks.length === 0 && (
+                          <div className="py-12 border border-dashed border-border-medium rounded-xl text-center text-[10px] text-text-secondary font-medium">
+                            No tasks in this column.
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* VIEW 3: CALENDAR VIEW */}
+            {dbView === 'calendar' && (
+              <Card className="rounded-[24px] border border-border-subtle bg-surface p-5 shadow-subtle space-y-6">
+                <div className="grid grid-cols-7 gap-2 text-center text-[10px] font-bold uppercase tracking-wider text-text-tertiary border-b border-border-subtle pb-2">
+                  <span>Sun</span>
+                  <span>Mon</span>
+                  <span>Tue</span>
+                  <span>Wed</span>
+                  <span>Thu</span>
+                  <span>Fri</span>
+                  <span>Sat</span>
+                </div>
+
+                <div className="grid grid-cols-7 gap-2.5">
+                  {/* July 2026 starts on Wednesday = 3 blank cells */}
+                  {Array.from({ length: 3 }).map((_, idx) => (
+                    <div key={`empty-${idx}`} className="h-20 bg-bg-secondary/20 rounded-xl border border-dashed border-border-subtle/40" />
+                  ))}
+
+                  {Array.from({ length: 31 }).map((_, idx) => {
+                    const day = idx + 1
+                    const dateStr = `2026-07-${String(day).padStart(2, '0')}`
+                    const dayTasks = tasks.filter((t) => t.dueDate === dateStr)
+
+                    return (
+                      <div
+                        key={day}
+                        onClick={() => {
+                          setDraft((prev) => ({ ...prev, dueDate: dateStr }))
+                          openCreateModal()
+                        }}
+                        className={cn(
+                          'h-20 p-2 rounded-xl border text-left flex flex-col justify-between transition-colors bg-bg-secondary/20 border-border-subtle/50 hover:border-border-medium hover:bg-bg-secondary/40 cursor-pointer',
+                          day === 11 && 'bg-primary/5 border-primary shadow-subtle'
+                        )}
+                      >
+                        <span className={cn('text-[10px] font-extrabold font-mono', day === 11 ? 'text-primary' : 'text-text-secondary')}>
+                          {day}
+                        </span>
+                        <div className="space-y-1 overflow-hidden flex-1 mt-1">
+                          {dayTasks.slice(0, 2).map((t) => (
+                            <div
+                              key={t.id}
+                              onClick={(e) => { e.stopPropagation(); openEditModal(t); }}
+                              className={cn(
+                                'text-[8px] px-1 py-0.5 rounded truncate font-bold border',
+                                t.status === 'completed'
+                                  ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                  : 'bg-primary/10 text-primary border-primary/20'
+                              )}
+                              title={t.title}
+                            >
+                              {t.title}
+                            </div>
+                          ))}
+                          {dayTasks.length > 2 && (
+                            <span className="text-[7px] text-text-tertiary block pl-1 font-bold">
+                              +{dayTasks.length - 2} more
                             </span>
                           )}
-                          <PriorityBadge priority={task.priority} />
                         </div>
-                        {task.description && (
-                          <p className="text-[10px] text-text-secondary mt-1 leading-relaxed line-clamp-1">
-                            {task.description}
-                          </p>
-                        )}
                       </div>
-                    </div>
-
-                    <div className="flex items-center justify-between sm:justify-end gap-4 border-t border-border-subtle/50 pt-3 sm:border-0 sm:pt-0 shrink-0">
-                      <div className="flex items-center gap-3 text-[10px] font-semibold text-text-secondary">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3.5 w-3.5 text-text-tertiary" /> {task.estimatedHours} hrs
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <CalendarDays className="h-3.5 w-3.5 text-text-tertiary" /> {formatTaskDate(task.dueDate)}
-                        </span>
-                        {task.status !== 'completed' && isOverdue(task) && (
-                          <span className="text-accent-rose font-bold uppercase tracking-wider flex items-center gap-0.5">
-                            <AlertTriangle className="h-3 w-3" /> Overdue
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => openEditModal(task)}
-                          className="rounded-lg p-1.5 text-text-secondary hover:bg-bg-secondary hover:text-text-primary transition-colors cursor-pointer"
-                        >
-                          <Edit3 className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(task.id)}
-                          className="rounded-lg p-1.5 text-accent-rose hover:bg-accent-rose/10 transition-colors cursor-pointer"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </motion.article>
-                )
-              })}
-            </AnimatePresence>
-
-            {filteredTasks.length === 0 && (
-              <Card className="rounded-[24px] border border-dashed border-border-medium p-12 text-center max-w-sm mx-auto">
-                <FileText className="h-12 w-12 text-text-tertiary mx-auto mb-4" />
-                <h4 className="text-sm font-bold text-text-primary">No Tasks Found</h4>
-                <p className="text-[10px] text-text-secondary mt-1">Add a new task or adjust filters to see items.</p>
-                <Button onClick={openCreateModal} className="mt-4 text-xs font-semibold rounded-xl">
-                  Add New Task
-                </Button>
+                    )
+                  })}
+                </div>
               </Card>
             )}
+
+            {/* VIEW 4: TIMELINE VIEW */}
+            {dbView === 'timeline' && (
+              <Card className="p-6 border-border-subtle bg-surface shadow-subtle space-y-6">
+                <div className="space-y-4">
+                  <span className="text-xs font-bold text-text-primary block">Assignments due timeline by course</span>
+                  <div className="border border-border-subtle rounded-2xl overflow-hidden bg-bg-secondary/15">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-bg-secondary/40 border-b border-border-subtle/60 text-[9px] font-bold uppercase tracking-wider text-text-secondary">
+                          <th className="p-3 w-40">Course Code</th>
+                          <th className="p-3">Timeline Deadlines Schedule (July 2026)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border-subtle">
+                        {courses.map((course) => {
+                          const courseTasks = filteredTasks.filter((t) => t.subject === course.name)
+                          return (
+                            <tr key={course.id} className="hover:bg-bg-secondary/15 transition-colors">
+                              <td className="p-3 font-extrabold flex items-center gap-2">
+                                <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: course.color }} />
+                                {course.code}
+                              </td>
+                              <td className="p-3">
+                                {courseTasks.length > 0 ? (
+                                  <div className="flex flex-wrap gap-2.5">
+                                    {courseTasks.map((t) => (
+                                      <div
+                                        key={t.id}
+                                        onClick={() => openEditModal(t)}
+                                        className={cn(
+                                          'px-2.5 py-1.5 rounded-xl border flex items-center gap-1.5 cursor-pointer shadow-subtle text-[10px] font-bold bg-surface hover:border-border-medium transition-colors',
+                                          t.status === 'completed'
+                                            ? 'border-emerald-500/20 text-emerald-500'
+                                            : 'border-primary/20 text-primary'
+                                        )}
+                                      >
+                                        <span className="font-extrabold font-mono text-[9px]">Due {new Date(t.dueDate).getDate()}:</span>
+                                        {t.title}
+                                        <Badge variant={t.priority === 'urgent' ? 'rose' : t.priority === 'high' ? 'orange' : 'indigo'}>
+                                          {t.priority}
+                                        </Badge>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span className="text-[10px] text-text-tertiary italic">No active deadlines</span>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </Card>
+            )}
+
           </div>
+
         </div>
       )}
 
@@ -537,7 +879,7 @@ export default function Planner() {
           </div>
 
           <div className="grid grid-cols-7 gap-2.5">
-            {/* Pad calendar start offset days (July 2026 starts on Wednesday = 3 blank cells) */}
+            {/* Pad calendar start offset days */}
             {Array.from({ length: 3 }).map((_, idx) => (
               <div key={`empty-${idx}`} className="h-20 bg-bg-secondary/20 rounded-xl border border-dashed border-border-subtle/40" />
             ))}
@@ -546,8 +888,6 @@ export default function Planner() {
             {Array.from({ length: 31 }).map((_, idx) => {
               const day = idx + 1
               const dateStr = `2026-07-${String(day).padStart(2, '0')}`
-
-              // Find tasks matching this date
               const dayTasks = tasks.filter((t) => t.dueDate === dateStr)
 
               return (
@@ -555,7 +895,7 @@ export default function Planner() {
                   key={day}
                   className={cn(
                     'h-20 p-2 rounded-xl border text-left flex flex-col justify-between transition-colors bg-bg-secondary/20 border-border-subtle/50 hover:border-border-medium hover:bg-bg-secondary/40',
-                    day === 11 && 'bg-primary/5 border-primary shadow-subtle' // Highlight active today date
+                    day === 11 && 'bg-primary/5 border-primary shadow-subtle'
                   )}
                 >
                   <span className={cn('text-[10px] font-extrabold font-mono', day === 11 ? 'text-primary' : 'text-text-secondary')}>
@@ -626,7 +966,7 @@ export default function Planner() {
             <div className="flex items-center gap-3">
               <Button
                 onClick={() => setPomoRunning(!pomoRunning)}
-                className="gap-2 rounded-xl font-bold shadow-soft text-xs"
+                className="gap-2 rounded-xl font-bold shadow-soft text-xs bg-primary text-white"
               >
                 {pomoRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                 {pomoRunning ? 'Pause' : 'Start'}
@@ -851,12 +1191,12 @@ export default function Planner() {
                 </div>
 
                 <div className="flex justify-end gap-3 pt-3 border-t border-border-subtle/50">
-                  <Button variant="outline" type="button" onClick={() => setModalOpen(false)} className="rounded-xl text-xs">
+                  <AnimatedButton variant="outline" type="button" onClick={() => setModalOpen(false)} className="rounded-xl text-xs">
                     Cancel
-                  </Button>
-                  <Button type="submit" className="rounded-xl text-xs">
+                  </AnimatedButton>
+                  <AnimatedButton type="submit" className="rounded-xl text-xs bg-primary text-white">
                     Save Task
-                  </Button>
+                  </AnimatedButton>
                 </div>
               </form>
             </motion.div>

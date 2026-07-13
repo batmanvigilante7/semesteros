@@ -3,42 +3,69 @@ import type { UserProfile, RecentActivity } from '@/models'
 const PROFILE_KEY = 'semesteros.profile.v2'
 
 const defaultProfile: UserProfile = {
-  name: 'Hemanth',
-  bio: 'Computer Science sophomore focusing on frontend systems and AI engineering.',
-  email: 'hemanth@semesteros.dev',
-  phone: '+1 (555) 019-2834',
-  university: 'Stanford University',
-  department: 'Computer Science & Engineering',
-  semester: 'Semester III',
-  branch: 'Artificial Intelligence',
-  rollNumber: 'SU-2026-CS802',
-  section: 'A',
-  academicYear: 'AY 2026-27',
-  expectedGraduation: 'Spring 2028',
-  interests: ['React', 'TypeScript', 'Machine Learning', 'UX Design', 'Jerk-free Spacing'],
-  careerGoal: 'Staff Frontend Engineer & Design Systems Architect',
+  name: '',
+  bio: '',
+  email: '',
+  phone: '',
+  university: '',
+  department: '',
+  semester: '',
+  branch: '',
+  rollNumber: '',
+  section: '',
+  academicYear: '',
+  expectedGraduation: '',
+  interests: [],
+  careerGoal: '',
   avatarUrl: null,
-  achievements: ['Consistency', 'Early Bird'],
-  recentActivities: [
-    {
-      id: 'act-1',
-      type: 'assignment',
-      content: 'Marked "Prepare COA Quiz Notes" as in-progress',
-      timestamp: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-    },
-    {
-      id: 'act-2',
-      type: 'lesson',
-      content: 'Completed "Inheritance & Polymorphism" in OOP theory',
-      timestamp: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
-    },
-    {
-      id: 'act-3',
-      type: 'resource',
-      content: 'Uploaded "Statistical Expectations PDF" to Math resources',
-      timestamp: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-    },
-  ],
+  achievements: [],
+  recentActivities: [],
+  
+  apaarId: '',
+  campus: '',
+  college: '',
+  batch: '',
+  degree: '',
+  program: '',
+  currentYear: '',
+  academicAdvisor: '',
+  studentStatus: '',
+
+  dob: '',
+  gender: '',
+  nationality: '',
+  religion: '',
+  category: '',
+  bloodGroup: '',
+  aadharNumber: '',
+  passportNumber: '',
+
+  alternateEmail: '',
+  parentPhone: '',
+  emergencyContact: '',
+  linkedin: '',
+  github: '',
+  portfolio: '',
+
+  fatherName: '',
+  motherName: '',
+  guardianName: '',
+  guardianContact: '',
+
+  permanentAddress: '',
+  currentAddress: '',
+  city: '',
+  district: '',
+  state: '',
+  country: '',
+  postalCode: '',
+
+  theme: 'dark',
+  accentColor: '#6FA8FF',
+  language: 'en',
+  dateFormat: 'YYYY-MM-DD',
+  timeFormat: '12h',
+  timezone: 'UTC',
 }
 
 export const ProfileService = {
@@ -69,8 +96,17 @@ export const ProfileService = {
       'department',
       'rollNumber',
       'branch',
-      'careerGoal',
       'avatarUrl',
+      'campus',
+      'degree',
+      'program',
+      'dob',
+      'gender',
+      'nationality',
+      'aadharNumber',
+      'permanentAddress',
+      'fatherName',
+      'linkedin',
     ]
 
     let filledCount = 0
@@ -78,11 +114,7 @@ export const ProfileService = {
       if (profile[field]) filledCount++
     })
 
-    if (profile.interests && profile.interests.length > 0) filledCount++
-    
-    // Max 11 fields monitored
-    const totalFields = fields.length + 1
-    return Math.round((filledCount / totalFields) * 100)
+    return Math.round((filledCount / fields.length) * 100)
   },
 
   addActivity(type: RecentActivity['type'], content: string): void {

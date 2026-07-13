@@ -28,6 +28,7 @@ import { Badge } from '@/components/ui/Badge'
 import type { Course, CourseResource, Assignment, CourseNote } from '@/models'
 import { cn } from '@/utils/cn'
 import { useCourseStore } from '@/stores/AcademicEngine'
+import BlockEditor from '@/components/ui/BlockEditor'
 
 interface CourseDetailContentProps {
   Course: Course
@@ -87,6 +88,7 @@ export function CourseDetailContent({
   const [noteTitleInput, setNoteTitleInput] = useState('')
   const [noteContentInput, setNoteContentInput] = useState('')
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [mobileNotesView, setMobileNotesView] = useState<'list' | 'editor'>('list')
 
   // Accordion Modules Open State
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>(() => {
@@ -113,6 +115,7 @@ export function CourseDetailContent({
     setNoteTitleInput(note.title)
     setNoteContentInput(note.content)
     setSaveStatus('idle')
+    setMobileNotesView('editor')
   }
 
   const handleCreateNewNote = () => {
@@ -120,6 +123,7 @@ export function CourseDetailContent({
     addNote(Course.id, title, '')
     // The note will be added to the Course.notes array, and the useEffect will pick it up
     setSaveStatus('idle')
+    setMobileNotesView('editor')
   }
 
   const handleSaveNote = () => {
@@ -147,6 +151,7 @@ export function CourseDetailContent({
         setSelectedNoteId(null)
         setNoteTitleInput('')
         setNoteContentInput('')
+        setMobileNotesView('list')
       }
     }
   }
@@ -165,6 +170,57 @@ export function CourseDetailContent({
   )
 
   const upcomingDeadlines = sortedAssignments.filter((a) => a.status !== 'completed')
+
+  // Count total topics
+  let totalTopicsCount = 0
+  let completedTopicsCount = 0
+  if (Course.modules) {
+    Course.modules.forEach((m) => {
+      if (m.topics) {
+        m.topics.forEach((t) => {
+          totalTopicsCount++
+          if (t.status === 'Completed') completedTopicsCount++
+        })
+      }
+    })
+  }
+
+  // Progress Intelligence calculations
+  const totalModules = Course.modules?.length || 0
+  const completedModules = Course.modules?.filter((m) => m.status === 'Completed').length || 0
+  const inProgressTopicsCount = Course.modules?.reduce((sum, m) => sum + (m.topics?.filter((t) => t.status === 'In Progress').length || 0), 0) || 0
+
+  const totalSubtopics = totalTopicsCount * 3
+  const completedSubtopics = completedTopicsCount * 3 + inProgressTopicsCount * 1
+
+  const estimatedHoursLeft = Course.modules?.reduce(
+    (sum, m) => sum + (m.topics?.filter((t) => t.status !== 'Completed').reduce((tsum, t) => tsum + (t.estimatedStudyTime || t.duration || 1), 0) || 0),
+    0
+  ) || 0
+
+  const readinessScore = totalTopicsCount > 0 ? Math.round(((completedTopicsCount + inProgressTopicsCount * 0.5) / totalTopicsCount) * 100) : 0
+  
+  let readinessStatus = 'Not Ready'
+  let readinessColor = 'text-danger bg-danger/10 border-danger/20'
+  if (readinessScore >= 90) {
+    readinessStatus = 'Excellent'
+    readinessColor = 'text-success bg-success/10 border-success/20'
+  } else if (readinessScore >= 75) {
+    readinessStatus = 'Exam Ready'
+    readinessColor = 'text-info bg-info/10 border-info/20'
+  } else if (readinessScore >= 50) {
+    readinessStatus = 'On Track'
+    readinessColor = 'text-primary bg-primary/10 border-primary/20'
+  } else if (readinessScore >= 25) {
+    readinessStatus = 'Needs Improvement'
+    readinessColor = 'text-accent bg-accent/10 border-accent/20'
+  }
+
+  // Next recommended topic
+  const nextTopic = Course.modules?.flatMap((m) => m.topics || []).find((t) => t.status !== 'Completed')
+
+  // Weak Areas (Modules < 70% progress)
+  const weakModules = Course.modules?.filter((m) => m.progress < 70) || []
 
   // Add Resource Handler
   const handleAddResource = (e: React.FormEvent) => {
@@ -219,15 +275,7 @@ export function CourseDetailContent({
     }
   }
 
-  // Count total topics
-  let totalTopicsCount = 0
-  let completedTopicsCount = 0
-  Course.modules.forEach((m) => {
-    m.topics.forEach((t) => {
-      totalTopicsCount++
-      if (t.status === 'Completed') completedTopicsCount++
-    })
-  })
+  // Topic counts are already calculated above
 
   return (
     <motion.div
@@ -554,7 +602,7 @@ export function CourseDetailContent({
               {activeTab === 'notes' && (
                 <div className="grid gap-4 md:grid-cols-[1fr_2fr]">
                   {/* Left Column: Notes directory */}
-                  <Card className="rounded-[24px] p-4 border-border-subtle bg-bg-secondary/40 space-y-4 max-h-[480px] overflow-y-auto">
+                  <Card className={cn("rounded-[24px] p-4 border-border-subtle bg-bg-secondary/40 space-y-4 max-h-[480px] overflow-y-auto md:block", mobileNotesView === 'list' ? 'block' : 'hidden')}>
                     <div className="flex items-center justify-between pb-2 border-b border-border-subtle">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-text-secondary">Folder Notes</span>
                       <button
@@ -572,10 +620,10 @@ export function CourseDetailContent({
                             key={note.id}
                             onClick={() => handleSelectNote(note)}
                             className={cn(
-                              "rounded-xl p-3 cursor-pointer border transition-all text-left relative group",
-                              selectedNoteId === note.id
-                                ? "bg-bg-primary border-accent-blue shadow-subtle"
-                                : "bg-bg-primary/50 border-border-subtle hover:border-text-tertiary"
+                                "rounded-xl p-3 cursor-pointer border transition-all text-left relative group",
+                                selectedNoteId === note.id
+                                  ? "bg-bg-primary border-accent-blue shadow-subtle"
+                                  : "bg-bg-primary/50 border-border-subtle hover:border-text-tertiary"
                             )}
                           >
                             <h4 className="text-xs font-bold text-text-primary truncate pr-5">{note.title}</h4>
@@ -601,9 +649,16 @@ export function CourseDetailContent({
 
                   {/* Right Column: Note Editor */}
                   {selectedNoteId ? (
-                    <Card className="rounded-[24px] p-6 border-border-subtle space-y-4 bg-[#FDFCF7] dark:bg-bg-tertiary shadow-soft">
+                    <Card className={cn("rounded-[24px] p-6 border-border-subtle space-y-4 bg-[#FDFCF7] dark:bg-bg-tertiary shadow-soft md:block", mobileNotesView === 'editor' ? 'block' : 'hidden')}>
                       <div className="flex items-center justify-between border-b border-border-subtle pb-3">
                         <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setMobileNotesView('list')}
+                            className="md:hidden p-1.5 mr-1 rounded-xl text-text-secondary hover:bg-bg-secondary cursor-pointer"
+                            title="Back to list"
+                          >
+                            <ArrowLeft className="h-4.5 w-4.5" />
+                          </button>
                           <NotebookPen className="h-4.5 w-4.5 text-accent-amber" />
                           <input
                             type="text"
@@ -622,16 +677,24 @@ export function CourseDetailContent({
                           {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved!' : 'Save Note'}
                         </button>
                       </div>
-                      <textarea
-                        value={noteContentInput}
-                        onChange={(e) => setNoteContentInput(e.target.value)}
-                        placeholder={`Start writing lecture formulas or revisal checkpoints for ${Course.code}...`}
-                        rows={12}
-                        className="w-full bg-transparent resize-y text-xs text-text-primary leading-relaxed outline-none border-none placeholder:text-text-tertiary focus:ring-0"
-                      />
+                      <div className="flex-1 overflow-y-auto max-h-[480px] pr-2 pt-2 border-t border-border-subtle/50">
+                        <BlockEditor
+                          value={noteContentInput}
+                          onChange={setNoteContentInput}
+                          placeholder="Type '/' for formatting blocks (Heading, To-do list, Bullet list, Code block, Divider)..."
+                        />
+                      </div>
                     </Card>
                   ) : (
-                    <Card className="rounded-[24px] p-6 border-border-subtle bg-bg-secondary/10 flex flex-col items-center justify-center text-center h-full min-h-[300px]">
+                    <Card className={cn("rounded-[24px] p-6 border-border-subtle bg-bg-secondary/10 flex flex-col items-center justify-center text-center h-full min-h-[300px] md:flex", mobileNotesView === 'editor' ? 'flex' : 'hidden')}>
+                      <div className="w-full flex justify-start md:hidden mb-4">
+                        <button
+                          onClick={() => setMobileNotesView('list')}
+                          className="p-1.5 rounded-xl text-text-secondary hover:bg-bg-secondary cursor-pointer"
+                        >
+                          <ArrowLeft className="h-4.5 w-4.5" /> Back to list
+                        </button>
+                      </div>
                       <NotebookPen className="h-10 w-10 text-text-tertiary opacity-45 mb-2" />
                       <p className="text-xs font-semibold text-text-secondary">No Note Selected</p>
                       <p className="text-[10px] text-text-secondary mt-1">Select an existing note from the folder or create a new one.</p>
@@ -800,7 +863,81 @@ export function CourseDetailContent({
         </div>
 
         {/* Persistent Right Panel */}
-        <div className="space-y-6">
+        <div className={cn("space-y-6 lg:block", activeTab === 'overview' ? 'block' : 'hidden')}>
+          {/* Progress Intelligence Card */}
+          <Card className="rounded-[24px] p-6 border-border-subtle space-y-5">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-extrabold uppercase tracking-wider text-text-primary flex items-center gap-1.5">
+                <Target className="h-4 w-4 text-primary" /> Progress Intelligence
+              </h4>
+              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${readinessColor}`}>
+                {readinessStatus} ({readinessScore}%)
+              </span>
+            </div>
+
+            <div className="space-y-3.5">
+              <div>
+                <div className="flex justify-between items-center text-[10px] font-semibold text-text-secondary mb-1">
+                  <span>Overall Syllabus Progress</span>
+                  <span>{Course.progress}%</span>
+                </div>
+                <div className="h-2 w-full bg-bg-secondary rounded-full overflow-hidden border border-border-subtle">
+                  <div 
+                    className="h-full rounded-full transition-all duration-500" 
+                    style={{ width: `${Course.progress}%`, backgroundColor: Course.color }}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-left pt-1">
+                <div className="bg-bg-secondary/40 p-2.5 rounded-xl border border-border-subtle">
+                  <span className="text-[9px] text-text-secondary block uppercase font-bold tracking-wider">Modules</span>
+                  <span className="text-xs font-extrabold text-text-primary">{completedModules} / {totalModules} Complete</span>
+                </div>
+                <div className="bg-bg-secondary/40 p-2.5 rounded-xl border border-border-subtle">
+                  <span className="text-[9px] text-text-secondary block uppercase font-bold tracking-wider">Topics</span>
+                  <span className="text-xs font-extrabold text-text-primary">{completedTopicsCount} / {totalTopicsCount} Pinned</span>
+                </div>
+                <div className="bg-bg-secondary/40 p-2.5 rounded-xl border border-border-subtle">
+                  <span className="text-[9px] text-text-secondary block uppercase font-bold tracking-wider">Subtopics</span>
+                  <span className="text-xs font-extrabold text-text-primary">{completedSubtopics} / {totalSubtopics} Ticked</span>
+                </div>
+                <div className="bg-bg-secondary/40 p-2.5 rounded-xl border border-border-subtle">
+                  <span className="text-[9px] text-text-secondary block uppercase font-bold tracking-wider">Hours Left</span>
+                  <span className="text-xs font-extrabold text-text-primary">{estimatedHoursLeft} Hours</span>
+                </div>
+              </div>
+
+              {/* Needs Attention / Weak Areas */}
+              {weakModules.length > 0 && (
+                <div className="pt-3 border-t border-border-subtle/50 text-left">
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-text-tertiary block mb-2">Needs Attention</span>
+                  <div className="space-y-1.5">
+                    {weakModules.slice(0, 2).map((mod) => (
+                      <div key={mod.id} className="flex justify-between items-center text-[10px] font-semibold text-text-secondary">
+                        <span className="truncate max-w-[150px]">{mod.title}</span>
+                        <span className="text-danger font-bold">{mod.progress}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recommended Next Topic */}
+              {nextTopic && (
+                <div className="pt-3 border-t border-border-subtle/50 text-left">
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-text-tertiary block mb-1">Recommended Next</span>
+                  <div className="flex justify-between items-center text-xs font-extrabold text-text-primary">
+                    <span className="truncate max-w-[140px] text-primary">{nextTopic.title}</span>
+                    <span className="text-[10px] text-text-secondary font-mono bg-bg-secondary px-1.5 py-0.5 rounded">
+                      {nextTopic.estimatedStudyTime || nextTopic.duration || 1}h est.
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card>
+
           <Card className="rounded-[24px] p-6 border-border-subtle space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold uppercase tracking-wider text-text-primary">Upcoming Assignments</h4>

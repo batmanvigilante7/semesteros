@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   CheckSquare,
   BookOpen,
-  Calendar,
   BarChart2,
   Settings,
   User,
@@ -15,7 +14,7 @@ import {
   Sparkles,
   ArrowRight,
   Folder,
-  Bot,
+  GraduationCap,
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
@@ -86,7 +85,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
       },
       {
         id: 'nav-resources',
-        title: 'Go to Resources',
+        title: 'Go to Knowledge Hub',
         subtitle: 'View study files and notes',
         icon: Folder,
         category: 'Navigation',
@@ -96,24 +95,13 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
         },
       },
       {
-        id: 'nav-ai',
-        title: 'Go to AI Assistant',
-        subtitle: 'Open syllabus intelligence center',
-        icon: Bot,
+        id: 'nav-study',
+        title: 'Go to Study Workspace',
+        subtitle: 'Open offline study and productivity suite',
+        icon: GraduationCap,
         category: 'Navigation',
         action: () => {
-          navigate('/ai')
-          onClose()
-        },
-      },
-      {
-        id: 'nav-timeline',
-        title: 'Go to Timeline',
-        subtitle: 'View calendar schedule',
-        icon: Calendar,
-        category: 'Navigation',
-        action: () => {
-          navigate('/timeline')
+          navigate('/study')
           onClose()
         },
       },

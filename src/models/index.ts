@@ -118,4 +118,56 @@ export interface UserProfile {
   avatarUrl: string | null
   achievements: string[]
   recentActivities: RecentActivity[]
+  
+  // Extended Academic Profile
+  apaarId?: string
+  campus?: string
+  college?: string
+  batch?: string
+  degree?: string
+  program?: string
+  currentYear?: string
+  academicAdvisor?: string
+  studentStatus?: string
+
+  // Extended Personal Details
+  dob?: string
+  gender?: string
+  nationality?: string
+  religion?: string
+  category?: string
+  bloodGroup?: string
+  aadharNumber?: string
+  passportNumber?: string
+
+  // Extended Contact Info
+  alternateEmail?: string
+  parentPhone?: string
+  emergencyContact?: string
+  linkedin?: string
+  github?: string
+  portfolio?: string
+
+  // Family Details
+  fatherName?: string
+  motherName?: string
+  guardianName?: string
+  guardianContact?: string
+
+  // Address Details
+  permanentAddress?: string
+  currentAddress?: string
+  city?: string
+  district?: string
+  state?: string
+  country?: string
+  postalCode?: string
+
+  // Preferences
+  theme?: string
+  accentColor?: string
+  language?: string
+  dateFormat?: string
+  timeFormat?: string
+  timezone?: string
 }

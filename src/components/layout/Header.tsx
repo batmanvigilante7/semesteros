@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Bell, Menu } from 'lucide-react'
 import Breadcrumb from './Breadcrumb'
 import SearchBar from './SearchBar'
@@ -9,8 +10,45 @@ interface HeaderProps {
 }
 
 export default function Header({ onMenuOpen, onNotificationOpen }: HeaderProps) {
+  const [scrollProgress, setScrollProgress] = useState(0)
+  const [isScrolled, setIsScrolled] = useState(false)
+
+  useEffect(() => {
+    const mainElement = document.querySelector('main')
+    if (!mainElement) return
+
+    const handleScroll = () => {
+      const scrollTop = mainElement.scrollTop
+      const scrollHeight = mainElement.scrollHeight - mainElement.clientHeight
+      if (scrollHeight > 0) {
+        setScrollProgress((scrollTop / scrollHeight) * 100)
+      } else {
+        setScrollProgress(0)
+      }
+      setIsScrolled(scrollTop > 25)
+    }
+
+    mainElement.addEventListener('scroll', handleScroll)
+    // Run initially
+    handleScroll()
+
+    return () => mainElement.removeEventListener('scroll', handleScroll)
+  }, [])
+
   return (
-    <header className="flex h-16 items-center justify-between border-b border-border-subtle bg-bg-primary px-6 shadow-subtle z-30 select-none">
+    <header 
+      className={`relative z-30 flex items-center justify-between border-b border-border-subtle px-6 select-none transition-all duration-300 ${
+        isScrolled 
+          ? 'h-13 bg-bg-primary/95 backdrop-blur-xl shadow-soft' 
+          : 'h-16 bg-bg-primary/75 backdrop-blur-md shadow-subtle'
+      }`}
+    >
+      {/* Moon Blue progress line */}
+      <div 
+        className="absolute bottom-0 left-0 h-[2px] bg-gradient-to-r from-primary to-accent transition-all duration-100 ease-out z-40"
+        style={{ width: `${scrollProgress}%`, opacity: scrollProgress > 0 ? 1 : 0 }}
+      />
+
       {/* Mobile Toggle & Breadcrumb Navigation */}
       <div className="flex items-center gap-4 min-w-0">
         <button
